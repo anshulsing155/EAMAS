@@ -1,0 +1,193 @@
+<UserControl x:Class="EAMAS.Desktop.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:EAMAS.Desktop.Converters"
+             xmlns:ctrl="clr-namespace:EAMAS.Desktop.Controls"
+             Background="{StaticResource ContentBgBrush}">
+    <UserControl.Resources>
+        <conv:ScoreToColorConverter x:Key="ScoreColor"/>
+        <conv:ScoreToProgressBrushConverter x:Key="ScoreProgressBrush"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+        <conv:IntToVisibilityConverter x:Key="IntVis"/>
+        <ctrl:HexToColorConverter x:Key="HexToColorConv"/>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,24">
+            <!-- Header -->
+            <Grid Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="Dashboard" Style="{StaticResource HeadingLarge}"/>
+                    <TextBlock Text="{Binding TodayDate}" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Content="Refresh" Style="{StaticResource SecondaryButton}"
+                        Command="{Binding RefreshCommand}"
+                        HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+            </Grid>
+
+            <!-- Alert Banner -->
+            <Border Background="#FEF3C7" BorderBrush="#D97706" BorderThickness="1"
+                    CornerRadius="8" Padding="14,10" Margin="0,0,0,16"
+                    Visibility="{Binding UnreadAlerts, Converter={StaticResource IntVis}}">
+                <TextBlock Foreground="#92400E" FontSize="13">
+                    <Run FontWeight="SemiBold" Text="&#x26A0;  "/>
+                    <Run Text="{Binding UnreadAlerts, Mode=OneWay}"/>
+                    <Run Text=" unread alert(s) require your attention."/>
+                </TextBlock>
+            </Border>
+
+            <!-- KPI Row -->
+            <UniformGrid Rows="1" Columns="4" Margin="0,0,0,20">
+                <!-- Active Time -->
+                <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="ACTIVE TIME TODAY" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding ActiveTimeLabel}" FontSize="26" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Hours worked" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <!-- Idle Time -->
+                <Border Style="{StaticResource Card}" Margin="4,0,4,0">
+                    <StackPanel>
+                        <TextBlock Text="IDLE TIME TODAY" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding IdleTimeLabel}" FontSize="26" FontWeight="Bold"
+                                   Foreground="{StaticResource WarningBrush}"/>
+                        <TextBlock Text="Detected idle" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <!-- Productivity Score -->
+                <Border Style="{StaticResource Card}" Margin="4,0,4,0">
+                    <StackPanel>
+                        <TextBlock Text="PRODUCTIVITY SCORE" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock FontSize="26" FontWeight="Bold"
+                                   Foreground="{Binding ProductivityScore, Converter={StaticResource ScoreColor}}">
+                            <Run Text="{Binding ProductivityScore, Mode=OneWay}"/>
+                            <Run Text="%"/>
+                        </TextBlock>
+                        <ProgressBar Value="{Binding ProductivityScore}" Maximum="100"
+                                     Style="{StaticResource StyledProgressBar}"
+                                     Foreground="{Binding ProductivityScore, Converter={StaticResource ScoreProgressBrush}}"
+                                     Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+                <!-- Screenshots -->
+                <Border Style="{StaticResource Card}" Margin="8,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="SCREENSHOTS TODAY" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding ScreenshotCount}" FontSize="26" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Captured" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- Charts Row -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="280"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Hourly Activity Chart -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <TextBlock Text="Hourly Activity" Style="{StaticResource HeadingMedium}" FontSize="15"/>
+                            <TextBlock Text="Active time per hour (08–20)"
+                                       Style="{StaticResource SecondaryText}" Margin="10,0,0,0"
+                                       VerticalAlignment="Bottom"/>
+                        </StackPanel>
+                        <ctrl:SimpleBarChart Items="{Binding HourlyChart}" Height="130" MaxHeightBar="120"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Category Breakdown -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Activity Breakdown" Style="{StaticResource HeadingMedium}"
+                                   FontSize="15" Margin="0,0,0,16"/>
+                        <ctrl:SimpleBarChart Items="{Binding CategoryChart}" Height="130" MaxHeightBar="120"/>
+                        <!-- Legend -->
+                        <StackPanel Margin="0,12,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <Border Width="10" Height="10" Background="#16A34A" CornerRadius="2" Margin="0,0,8,0"/>
+                                <TextBlock Text="Productive" Style="{StaticResource SecondaryText}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <Border Width="10" Height="10" Background="#3B82F6" CornerRadius="2" Margin="0,0,8,0"/>
+                                <TextBlock Text="Neutral" Style="{StaticResource SecondaryText}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <Border Width="10" Height="10" Background="#EF4444" CornerRadius="2" Margin="0,0,8,0"/>
+                                <TextBlock Text="Distracting" Style="{StaticResource SecondaryText}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Top Apps + Peak Hour Row -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="220"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Top Apps -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="Top Applications" Style="{StaticResource HeadingMedium}"
+                                   FontSize="15" Margin="0,0,0,16"/>
+                        <ItemsControl ItemsSource="{Binding TopApps}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="60"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding AppName}"
+                                                   Style="{StaticResource BodyText}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <ProgressBar Grid.Column="1" Value="{Binding Percent}"
+                                                     Maximum="100" Margin="8,0" Height="6"
+                                                     Style="{StaticResource StyledProgressBar}"
+                                                     Background="#E2E8F0">
+                                            <ProgressBar.Foreground>
+                                                <SolidColorBrush Color="{Binding CategoryColor,
+                                                    Converter={StaticResource HexToColorConv}}"/>
+                                            </ProgressBar.Foreground>
+                                        </ProgressBar>
+                                        <TextBlock Grid.Column="2" Text="{Binding TimeLabel}"
+                                                   Style="{StaticResource SecondaryText}"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Peak Hour -->
+                <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Peak Hour" Style="{StaticResource HeadingMedium}"
+                                   FontSize="15" Margin="0,0,0,16"/>
+                        <TextBlock Text="&#x23F0;" FontSize="36" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding PeakHour}" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                        <TextBlock Text="Most productive window" Style="{StaticResource SecondaryText}"
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

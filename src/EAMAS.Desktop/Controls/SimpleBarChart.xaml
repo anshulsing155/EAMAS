@@ -1,0 +1,67 @@
+<UserControl x:Class="EAMAS.Desktop.Controls.SimpleBarChart"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:EAMAS.Desktop.ViewModels"
+             xmlns:ctrl="clr-namespace:EAMAS.Desktop.Controls"
+             x:Name="Root">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Bars -->
+        <ItemsControl Grid.Row="0" ItemsSource="{Binding Items, ElementName=Root}"
+                      VerticalAlignment="Bottom">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:BarChartItem}">
+                    <Grid Margin="2,0" VerticalAlignment="Bottom">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="{Binding ValueLabel}"
+                                   FontSize="9" HorizontalAlignment="Center"
+                                   Foreground="#64748B" Margin="0,0,0,2"/>
+                        <Border Grid.Row="1" CornerRadius="3,3,0,0"
+                                MinHeight="3"
+                                Tag="{Binding DataContext.MaxHeightBar,
+                                    RelativeSource={RelativeSource AncestorType=UserControl}}">
+                            <Border.Height>
+                                <MultiBinding Converter="{x:Static ctrl:BarHeightMultiConverter.Instance}">
+                                    <Binding Path="BarHeightPercent"/>
+                                    <Binding Path="MaxHeightBar" ElementName="Root"/>
+                                </MultiBinding>
+                            </Border.Height>
+                            <Border.Background>
+                                <SolidColorBrush Color="{Binding Color,
+                                    Converter={x:Static ctrl:HexToColorConverter.Instance}}"/>
+                            </Border.Background>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- X-axis labels -->
+        <ItemsControl Grid.Row="1" Margin="0,4,0,0"
+                      ItemsSource="{Binding Items, ElementName=Root}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:BarChartItem}">
+                    <TextBlock Text="{Binding Label}" FontSize="10"
+                               HorizontalAlignment="Center" Foreground="#94A3B8"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>

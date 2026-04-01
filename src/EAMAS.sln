@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EAMAS.Core", "EAMAS.Core\EAMAS.Core.csproj", "{F21A8B58-6A36-4D4E-8E0F-1F9513B927A9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EAMAS.Desktop", "EAMAS.Desktop\EAMAS.Desktop.csproj", "{8BED8D38-2E08-4B6F-8A0F-03D2BF8C556D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F21A8B58-6A36-4D4E-8E0F-1F9513B927A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F21A8B58-6A36-4D4E-8E0F-1F9513B927A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F21A8B58-6A36-4D4E-8E0F-1F9513B927A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F21A8B58-6A36-4D4E-8E0F-1F9513B927A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BED8D38-2E08-4B6F-8A0F-03D2BF8C556D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BED8D38-2E08-4B6F-8A0F-03D2BF8C556D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BED8D38-2E08-4B6F-8A0F-03D2BF8C556D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BED8D38-2E08-4B6F-8A0F-03D2BF8C556D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

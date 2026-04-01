@@ -1,0 +1,161 @@
+<UserControl x:Class="EAMAS.Desktop.Views.EmployeesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:EAMAS.Desktop.Converters"
+             xmlns:local="clr-namespace:EAMAS.Desktop.Views"
+             Background="{StaticResource ContentBgBrush}">
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+        <conv:BoolToVisibilityConverter x:Key="InvBoolVis" Invert="True"/>
+        <conv:NullOrEmptyToVisibilityConverter x:Key="MsgVis"/>
+        <conv:InitialsConverter x:Key="InitialsConv"/>
+        <local:RoleToBrushConverter x:Key="RoleBgBrush" IsBackground="True"/>
+        <local:RoleToBrushConverter x:Key="RoleTextBrush" IsBackground="False"/>
+        <local:ActiveToBrushConverter x:Key="ActiveBgBrush" IsBackground="True"/>
+        <local:ActiveToBrushConverter x:Key="ActiveTextBrush" IsBackground="False"/>
+        <local:ActiveToTextConverter x:Key="ActiveText"/>
+        <local:BoolToLabelConverter x:Key="NewUserTitle" TrueLabel="Add Employee" FalseLabel="Edit Employee"/>
+    </UserControl.Resources>
+
+    <Grid Margin="28,24">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="360"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,20">
+            <StackPanel>
+                <TextBlock Text="Employee Management" Style="{StaticResource HeadingLarge}"/>
+                <TextBlock Text="Manage users, roles, and access" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
+            </StackPanel>
+            <Button Content="&#xE710;  Add Employee" Style="{StaticResource PrimaryButton}"
+                    Command="{Binding AddNewCommand}"
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+        </Grid>
+
+        <!-- Employee Table -->
+        <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Card}" Padding="0" Margin="0,0,16,0">
+            <DataGrid Style="{StaticResource StyledDataGrid}"
+                      ItemsSource="{Binding Employees}"
+                      SelectedItem="{Binding SelectedEmployee}">
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="EMPLOYEE" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="12,4">
+                                    <Border Width="30" Height="30" CornerRadius="15"
+                                            Background="{StaticResource PrimaryBrush}" Margin="0,0,10,0">
+                                        <TextBlock FontSize="11" FontWeight="Bold" Foreground="White"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Text="{Binding FullName,
+                                                       Converter={StaticResource InitialsConv}}"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="{Binding Username}" Style="{StaticResource SecondaryText}"
+                                                   FontSize="11"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="EMAIL" Binding="{Binding Email}" Width="180"/>
+                    <DataGridTextColumn Header="DEPARTMENT" Binding="{Binding Department}" Width="120"/>
+                    <DataGridTemplateColumn Header="ROLE" Width="90">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="4" Padding="6,2" Margin="12,2"
+                                        HorizontalAlignment="Left"
+                                        Background="{Binding Role, Converter={StaticResource RoleBgBrush}}">
+                                    <TextBlock Text="{Binding Role}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{Binding Role, Converter={StaticResource RoleTextBrush}}"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="STATUS" Width="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="4" Padding="6,2" Margin="12,2"
+                                        HorizontalAlignment="Left"
+                                        Background="{Binding IsActive, Converter={StaticResource ActiveBgBrush}}">
+                                    <TextBlock FontSize="11" FontWeight="SemiBold"
+                                               Text="{Binding IsActive, Converter={StaticResource ActiveText}}"
+                                               Foreground="{Binding IsActive, Converter={StaticResource ActiveTextBrush}}"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Edit Panel -->
+        <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}"
+                Visibility="{Binding IsEditPanelOpen, Converter={StaticResource BoolVis}}">
+            <StackPanel>
+                <TextBlock FontSize="15" Style="{StaticResource HeadingMedium}" Margin="0,0,0,16"
+                           Text="{Binding IsNewUser, Converter={StaticResource NewUserTitle}}"/>
+
+                <!-- Status message -->
+                <Border Background="#FEF3C7" BorderBrush="#D97706" BorderThickness="1"
+                        CornerRadius="6" Padding="10,6" Margin="0,0,0,12"
+                        Visibility="{Binding StatusMessage, Converter={StaticResource MsgVis}}">
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#92400E" FontSize="12"
+                               TextWrapping="Wrap"/>
+                </Border>
+
+                <TextBlock Text="FULL NAME *" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                <TextBox Style="{StaticResource InputField}"
+                         Text="{Binding EditFullName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                <TextBlock Text="USERNAME *" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                <TextBox Style="{StaticResource InputField}"
+                         Text="{Binding EditUsername, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsNewUser}" Margin="0,0,0,12"/>
+
+                <TextBlock Text="EMAIL" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                <TextBox Style="{StaticResource InputField}"
+                         Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                <TextBlock Text="DEPARTMENT" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                <TextBox Style="{StaticResource InputField}"
+                         Text="{Binding EditDepartment, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                <TextBlock Text="ROLE" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                <ComboBox Style="{StaticResource StyledComboBox}"
+                          ItemsSource="{Binding RoleOptions}"
+                          SelectedItem="{Binding EditRoleString}"
+                          Margin="0,0,0,12"/>
+
+                <TextBlock Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6">
+                    <Run Text="PASSWORD"/>
+                    <Run Text=" (leave blank to keep)" Foreground="#94A3B8"/>
+                </TextBlock>
+                <PasswordBox x:Name="TxtEditPwd" Style="{StaticResource PasswordField}" Margin="0,0,0,16"/>
+
+                <!-- Buttons -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="Deactivate" Style="{StaticResource DangerButton}"
+                            Command="{Binding DeactivateCommand}"
+                            HorizontalAlignment="Left"
+                            Visibility="{Binding IsNewUser, Converter={StaticResource InvBoolVis}}"/>
+                    <Button Grid.Column="1" Content="Cancel" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding CancelEditCommand}" Margin="0,0,8,0"/>
+                    <Button Grid.Column="2" Content="Save" Style="{StaticResource PrimaryButton}"
+                            Click="Save_Click"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
