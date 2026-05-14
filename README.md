@@ -1,44 +1,59 @@
 # Employee Activity Monitoring & Analytics System (EAMAS)
 
-A Windows-first employee monitoring system with local analytics, installable desktop software, and no AI or external analytics APIs.
+EAMAS is a Windows-first desktop application for employee activity monitoring, screenshot capture, reporting, and local productivity analytics.
 
-## Tech stack
+## Current stack
 - C# / .NET 8
 - WPF desktop UI
-- SQLite local database
-- MVVM architecture for scalability
+- MongoDB
+- MVVM architecture
 
-## Core architecture
-- `EAMAS.Core`: business logic, domain models, services, reports
-- `EAMAS.Desktop`: WPF UI, views, view models, startup
-- `Data`: local SQLite storage and configuration
+## Solution layout
+- `src/EAMAS.Core/` - domain models, MongoDB data access, analytics, reporting, and business services
+- `src/EAMAS.Desktop/` - WPF application, views, view models, Windows integration, and startup flow
 
-## MVP scope
-- Screen time tracking (active vs idle)
-- Application usage logging
-- Screenshot capture workflow
-- Daily/weekly/monthly reports
-- Local analytics and productivity scores
-- Role-based UI for Admin / Manager / Employee
+## Features
+- Active vs idle time tracking
+- Foreground application and window-title logging
+- Periodic and manual screenshot capture
+- Daily, weekly, monthly, and custom reports
+- Productivity categorization and alerting
+- Multi-tenant organisation login model
+- Role-based access for SuperAdmin, Admin, Manager, and Employee
 
-## Why this stack
-- Native Windows desktop experience
-- No external API or AI dependency
-- Scalable architecture for features like alerts, export, encryption
+## Prerequisites
+- Windows 10 or later
+- .NET 8 SDK for development
+- .NET 8 Desktop Runtime for running built binaries
+- A reachable MongoDB instance
 
-## Next steps
-1. Open the solution in Visual Studio 2022/2023.
-2. Implement native activity tracking using Windows APIs.
-3. Add screenshot capture and local storage.
-4. Build dashboard views and reporting logic.
-5. Harden privacy, encryption, and user consent flows.
+## Configuration
+The app resolves database settings in this order:
 
-## Folder structure
-- `src/EAMAS.Core/`
-- `src/EAMAS.Desktop/`
+1. `%LocalAppData%\EAMAS\config.json`
+2. `DATABASE_URL` environment variable
+3. `mongodb://127.0.0.1:27017` with database name `eamas` as a local-development fallback
 
-## Build
-- Install .NET 8 SDK
-- Open `EAMAS.sln` or the `*.csproj` projects in Visual Studio
-- Restore NuGet packages
-- Build and run the desktop app
+On first launch without a local config file or `DATABASE_URL`, the app opens a database setup window.
+
+## First-run admin account
+The app seeds a default SuperAdmin account on first run if one does not already exist.
+
+- Organisation code: `SYSTEM`
+- Username: `superadmin`
+- Password: `Admin@123`
+
+You can override the initial seeded password before first launch with:
+
+- `EAMAS_SUPERADMIN_PASSWORD`
+
+Change the seeded password immediately after first login.
+
+## Build and run
+```powershell
+dotnet build src\EAMAS.Desktop\EAMAS.Desktop.csproj
+dotnet run --project src\EAMAS.Desktop\EAMAS.Desktop.csproj
+```
+
+## Privacy note
+This application captures activity metadata and screenshots. If you plan to use it outside local development, make sure your deployment, consent flow, retention policy, and legal/privacy review match the laws and policies that apply to your organisation.

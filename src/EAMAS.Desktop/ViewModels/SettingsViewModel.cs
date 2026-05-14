@@ -82,21 +82,53 @@ namespace EAMAS.Desktop.ViewModels
             IsSaving = true;
             try
             {
-                _settingsService.SaveSettings(new SystemSettings
+                if (ScreenshotInterval < 1)
                 {
-                    OrganizationId = App.CurrentOrgId,
-                    MonitoringEnabled = MonitoringEnabled,
-                    ScreenshotsEnabled = ScreenshotsEnabled,
-                    ScreenshotIntervalMinutes = ScreenshotInterval,
-                    IdleThresholdSeconds = IdleThreshold * 60,
-                    MaxScreenshotAgeDays = MaxScreenshotAge,
-                    JpegQuality = JpegQuality,
-                    AlertOnLongIdle = AlertOnLongIdle,
-                    LongIdleThresholdMinutes = LongIdleThreshold,
-                    AlertOnDistractingUsage = AlertOnDistracting,
-                    DistractingUsageThresholdMinutes = DistractingThreshold,
-                    ScreenshotsDirectory = ScreenshotsDir
-                });
+                    StatusMessage = "Screenshot interval must be at least 1 minute.";
+                    return;
+                }
+
+                if (IdleThreshold < 1)
+                {
+                    StatusMessage = "Idle threshold must be at least 1 minute.";
+                    return;
+                }
+
+                if (MaxScreenshotAge < 1)
+                {
+                    StatusMessage = "Max screenshot age must be at least 1 day.";
+                    return;
+                }
+
+                if (JpegQuality is < 1 or > 100)
+                {
+                    StatusMessage = "Screenshot quality must be between 1 and 100.";
+                    return;
+                }
+
+                if (LongIdleThreshold < 1 || DistractingThreshold < 1)
+                {
+                    StatusMessage = "Alert thresholds must be at least 1 minute.";
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(ScreenshotsDir))
+                    ScreenshotsDir = SettingsService.GetDefaultScreenshotsDirectory(App.CurrentOrgId);
+
+                var existing = _settingsService.GetSettings(App.CurrentOrgId);
+                existing.MonitoringEnabled = MonitoringEnabled;
+                existing.ScreenshotsEnabled = ScreenshotsEnabled;
+                existing.ScreenshotIntervalMinutes = ScreenshotInterval;
+                existing.IdleThresholdSeconds = IdleThreshold * 60;
+                existing.MaxScreenshotAgeDays = MaxScreenshotAge;
+                existing.JpegQuality = JpegQuality;
+                existing.AlertOnLongIdle = AlertOnLongIdle;
+                existing.LongIdleThresholdMinutes = LongIdleThreshold;
+                existing.AlertOnDistractingUsage = AlertOnDistracting;
+                existing.DistractingUsageThresholdMinutes = DistractingThreshold;
+                existing.ScreenshotsDirectory = ScreenshotsDir;
+
+                _settingsService.SaveSettings(existing);
                 StatusMessage = "Settings saved successfully.";
             }
             catch (Exception ex)
@@ -139,12 +171,9 @@ namespace EAMAS.Desktop.ViewModels
                 StatusMessage = "Passwords do not match.";
                 return;
             }
-            // Verify current password by re-authenticating
-            var user = _userService.Authenticate(
-                App.CurrentUser!.OrganizationId,
-                App.CurrentUser.Username,
-                current);
-            if (user == null)
+
+            var currentUser = _userService.GetById(App.CurrentUser!.Id);
+            if (currentUser == null || !UserService.VerifyPassword(current, currentUser.PasswordHash))
             {
                 StatusMessage = "Current password is incorrect.";
                 return;

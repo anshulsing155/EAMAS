@@ -22,7 +22,7 @@ namespace EAMAS.Core.Data
             // If connectionString not provided, try environment variable to avoid hard-coding credentials.
             if (string.IsNullOrWhiteSpace(connectionString))
             {
-                connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+                connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? string.Empty;
             }
 
             if (string.IsNullOrWhiteSpace(connectionString))
@@ -138,14 +138,14 @@ namespace EAMAS.Core.Data
             // Organizations: unique code (case-insensitive handled at app layer)
             await Organizations.Indexes.CreateOneAsync(new CreateIndexModel<Organization>(
                 Builders<Organization>.IndexKeys.Ascending(o => o.Code),
-                new CreateIndexOptions { Unique = true, Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Unique = true, Background = true })).ConfigureAwait(false);
 
             // Users: unique (OrganizationId + Username)
             await Users.Indexes.CreateOneAsync(new CreateIndexModel<User>(
                 Builders<User>.IndexKeys
                     .Ascending(u => u.OrganizationId)
                     .Ascending(u => u.Username),
-                new CreateIndexOptions { Unique = true, Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Unique = true, Background = true })).ConfigureAwait(false);
 
             // ActivityLogs: (OrganizationId, UserId, StartTime)
             await ActivityLogs.Indexes.CreateOneAsync(new CreateIndexModel<ActivityLog>(
@@ -153,7 +153,7 @@ namespace EAMAS.Core.Data
                     .Ascending(x => x.OrganizationId)
                     .Ascending(x => x.UserId)
                     .Ascending(x => x.StartTime),
-                new CreateIndexOptions { Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
 
             // AppUsages: (OrganizationId, UserId, RecordedAt)
             await AppUsages.Indexes.CreateOneAsync(new CreateIndexModel<AppUsage>(
@@ -161,7 +161,7 @@ namespace EAMAS.Core.Data
                     .Ascending(x => x.OrganizationId)
                     .Ascending(x => x.UserId)
                     .Ascending(x => x.RecordedAt),
-                new CreateIndexOptions { Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
 
             // ScreenshotRecords: (OrganizationId, UserId, TakenAt)
             await ScreenshotRecords.Indexes.CreateOneAsync(new CreateIndexModel<ScreenshotRecord>(
@@ -169,7 +169,7 @@ namespace EAMAS.Core.Data
                     .Ascending(x => x.OrganizationId)
                     .Ascending(x => x.UserId)
                     .Ascending(x => x.TakenAt),
-                new CreateIndexOptions { Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
 
             // Alerts: (OrganizationId, UserId, CreatedAt)
             await Alerts.Indexes.CreateOneAsync(new CreateIndexModel<Alert>(
@@ -177,19 +177,19 @@ namespace EAMAS.Core.Data
                     .Ascending(x => x.OrganizationId)
                     .Ascending(x => x.UserId)
                     .Ascending(x => x.CreatedAt),
-                new CreateIndexOptions { Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
 
             // AppCategoryRules: (OrganizationId, Priority)
             await AppCategoryRules.Indexes.CreateOneAsync(new CreateIndexModel<AppCategoryRule>(
                 Builders<AppCategoryRule>.IndexKeys
                     .Ascending(x => x.OrganizationId)
                     .Descending(x => x.Priority),
-                new CreateIndexOptions { Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
 
             // SystemSettings: unique OrganizationId (one settings doc per org)
             await SystemSettings.Indexes.CreateOneAsync(new CreateIndexModel<SystemSettings>(
                 Builders<SystemSettings>.IndexKeys.Ascending(x => x.OrganizationId),
-                new CreateIndexOptions { Unique = true, Background = true }), cancellationToken).ConfigureAwait(false);
+                new CreateIndexOptions { Unique = true, Background = true })).ConfigureAwait(false);
         }
 
         private async Task EnsureIndexesWithRetryAsync(TimeSpan initialDelay, int maxAttempts = 5)

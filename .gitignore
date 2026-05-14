@@ -8,6 +8,8 @@
 # Build results
 bin/
 obj/
+.codex-build/
+artifacts/
 
 # NuGet
 packages/

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="clr-namespace:EAMAS.Desktop.Converters"
         xmlns:services="clr-namespace:EAMAS.Desktop.Services"
-        Title="EAMAS — Employee Activity Monitoring &amp; Analytics"
+        Title="EAMAS - Employee Activity Monitoring &amp; Analytics"
         Height="760" Width="1200" MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource ContentBgBrush}">
@@ -19,10 +19,8 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ===== Sidebar ===== -->
         <Border Grid.Column="0" Background="{StaticResource SidebarBgBrush}">
             <DockPanel>
-                <!-- Logo -->
                 <StackPanel DockPanel.Dock="Top" Margin="20,24,20,8">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <Border Width="34" Height="34" CornerRadius="8"
@@ -41,11 +39,9 @@
                     <Separator Background="#1E293B" Margin="0,16,0,8"/>
                 </StackPanel>
 
-                <!-- Bottom: user info + logout -->
                 <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
                     <Separator Background="#1E293B" Margin="0,0,0,12"/>
 
-                    <!-- Current activity -->
                     <Border Background="#1E293B" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="NOW TRACKING" FontSize="9" FontWeight="SemiBold"
@@ -55,7 +51,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- User info -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <Border Width="32" Height="32" CornerRadius="16"
                                 Background="{StaticResource PrimaryBrush}">
@@ -73,12 +68,11 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <Button Content="⏻  Logout" Style="{StaticResource NavButton}"
+                    <Button Content="Logout" Style="{StaticResource NavButton}"
                             Command="{Binding LogoutCommand}"
                             Foreground="#EF4444" HorizontalContentAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Nav Items -->
                 <StackPanel Margin="12,0">
                     <Button x:Name="BtnDashboard"
                             Command="{Binding NavigateDashboardCommand}"
@@ -116,7 +110,6 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- Employees (admin/manager only) -->
                     <Button x:Name="BtnEmployees"
                             Command="{Binding NavigateEmployeesCommand}"
                             Style="{StaticResource NavButton}" Margin="0,2"
@@ -129,7 +122,6 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- Alert indicator -->
                     <Button x:Name="BtnAlerts"
                             Style="{StaticResource NavButton}" Margin="0,2"
                             IsEnabled="False">
@@ -157,7 +149,6 @@
             </DockPanel>
         </Border>
 
-        <!-- ===== Content Area ===== -->
         <ContentControl x:Name="MainContent" Grid.Column="1"
                         Background="{StaticResource ContentBgBrush}"/>
     </Grid>

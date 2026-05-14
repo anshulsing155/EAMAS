@@ -64,23 +64,33 @@ namespace EAMAS.Desktop.Services
         public void TriggerScreenshot()
         {
             var settings = _settingsService.GetSettings(_currentOrgId);
+            if (!settings.MonitoringEnabled || !settings.ScreenshotsEnabled)
+                return;
+
             CaptureAndSave(settings, isManual: true);
         }
 
         private async Task ActivityLoop(CancellationToken ct)
         {
-            var settings = _settingsService.GetSettings(_currentOrgId);
-            var pollMs = settings.ActivityPollIntervalSeconds * 1000;
-
             while (!ct.IsCancellationRequested)
             {
                 try
                 {
-                    PollActivity(settings);
-                }
-                catch { /* swallow tracking errors */ }
+                    var settings = _settingsService.GetSettings(_currentOrgId);
+                    if (settings.MonitoringEnabled)
+                        PollActivity(settings);
 
-                await Task.Delay(pollMs, ct).ConfigureAwait(false);
+                    var pollMs = Math.Max(1, settings.ActivityPollIntervalSeconds) * 1000;
+                    await Task.Delay(pollMs, ct).ConfigureAwait(false);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+                catch
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+                }
             }
         }
 
@@ -167,21 +177,24 @@ namespace EAMAS.Desktop.Services
 
         private async Task ScreenshotLoop(CancellationToken ct)
         {
-            var settings = _settingsService.GetSettings(_currentOrgId);
-            if (!settings.ScreenshotsEnabled) return;
-
             while (!ct.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromMinutes(settings.ScreenshotIntervalMinutes), ct)
-                    .ConfigureAwait(false);
+                var settings = _settingsService.GetSettings(_currentOrgId);
+                var intervalMinutes = Math.Max(1, settings.ScreenshotIntervalMinutes);
+
+                await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct).ConfigureAwait(false);
 
                 if (ct.IsCancellationRequested) break;
 
                 try
                 {
                     settings = _settingsService.GetSettings(_currentOrgId);
-                    if (settings.ScreenshotsEnabled)
+                    if (settings.MonitoringEnabled && settings.ScreenshotsEnabled)
                         CaptureAndSave(settings, isManual: false);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
                 }
                 catch { /* swallow */ }
             }

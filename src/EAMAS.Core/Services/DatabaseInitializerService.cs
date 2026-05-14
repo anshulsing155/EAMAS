@@ -5,9 +5,8 @@ using MongoDB.Driver;
 namespace EAMAS.Core.Services
 {
     /// <summary>
-    /// Seeds initial data on first run:
-    ///  - A "SYSTEM" organisation for the SuperAdmin
-    ///  - The default SuperAdmin user (superadmin / Admin@123)
+    /// Seeds the initial SuperAdmin user on first run.
+    /// The initial password can be overridden with EAMAS_SUPERADMIN_PASSWORD.
     /// </summary>
     public class DatabaseInitializerService
     {
@@ -28,6 +27,9 @@ namespace EAMAS.Core.Services
         private void SeedSuperAdmin()
         {
             const string systemOrgId = "SYSTEM";
+            var initialPassword = Environment.GetEnvironmentVariable("EAMAS_SUPERADMIN_PASSWORD");
+            if (string.IsNullOrWhiteSpace(initialPassword))
+                initialPassword = "Admin@123";
 
             // Only seed if no SuperAdmin exists
             if (_db.Users.CountDocuments(u =>
@@ -39,7 +41,7 @@ namespace EAMAS.Core.Services
             {
                 OrganizationId = systemOrgId,
                 Username = "superadmin",
-                PasswordHash = UserService.HashPassword("Admin@123"),
+                PasswordHash = UserService.HashPassword(initialPassword),
                 FullName = "System Administrator",
                 Email = "superadmin@eamas.local",
                 Department = "IT",

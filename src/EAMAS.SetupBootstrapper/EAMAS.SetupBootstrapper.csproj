@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>EAMAS.SetupBootstrapper</AssemblyName>
+    <RootNamespace>EAMAS.SetupBootstrapper</RootNamespace>
+    <ApplicationIcon>..\..\assets\EAMAS.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Payload\EAMAS-win-x64.zip" Condition="Exists('Payload\EAMAS-win-x64.zip')" />
+    <EmbeddedResource Include="..\..\installer\install.cmd" Link="install.cmd" />
+    <EmbeddedResource Include="..\..\installer\uninstall.cmd" Link="uninstall.cmd" />
+  </ItemGroup>
+</Project>
