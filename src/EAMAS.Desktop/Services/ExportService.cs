@@ -756,10 +756,12 @@ namespace EAMAS.Desktop.Services
         private static void PdfCell(TableDescriptor t, string text, string bg,
             bool bold = false, bool center = false)
         {
+            // AlignCenter() must be chained BEFORE Text() — QuestPDF containers are
+            // single-child; calling AlignCenter() after Text() assigns a second child.
             var cell = t.Cell().Background(bg).Padding(5);
-            var txt  = cell.Text(text).FontSize(8);
-            if (bold)   txt.Bold();
-            if (center) cell.AlignCenter();
+            var leaf = center ? cell.AlignCenter() : cell;
+            var txt  = leaf.Text(text).FontSize(8);
+            if (bold) txt.Bold();
         }
 
         // ── Excel helpers ────────────────────────────────────────────────────────
