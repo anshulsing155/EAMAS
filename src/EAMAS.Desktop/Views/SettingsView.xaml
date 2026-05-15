@@ -155,7 +155,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                            <TextBlock Text="SCREENSHOT INTERVAL (min)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="SCREENSHOT INTERVAL (min, ±40% random)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
                             <TextBox Style="{StaticResource InputField}"
                                      Text="{Binding ScreenshotInterval, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
@@ -255,7 +255,7 @@
                                FontSize="15" Margin="0,0,0,8"/>
                     <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryText}" FontSize="12"
                                Margin="0,0,0,16"
-                               Text="Set 0 to disable automatic purging. Purge runs when the app starts."/>
+                               Text="Set 0 to disable automatic purging. Screenshots purge runs 30 s after startup and every 24 h — images and database records older than the set days are deleted. Default: 7 days for screenshots."/>
 
                     <Grid>
                         <Grid.ColumnDefinitions>

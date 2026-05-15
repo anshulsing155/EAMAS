@@ -18,7 +18,7 @@ namespace EAMAS.Core.Models
         public int ScreenshotIntervalMinutes { get; set; } = 5;
         public int IdleThresholdSeconds { get; set; } = 300;
         public int ActivityPollIntervalSeconds { get; set; } = 5;
-        public int MaxScreenshotAgeDays { get; set; } = 30;
+        public int MaxScreenshotAgeDays { get; set; } = 7;
         public int JpegQuality { get; set; } = 70;
         public bool AlertOnLongIdle { get; set; } = true;
         public int LongIdleThresholdMinutes { get; set; } = 30;

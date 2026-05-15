@@ -60,7 +60,7 @@ namespace EAMAS.Core.Services
             ScreenshotIntervalMinutes = 5,
             IdleThresholdSeconds = 300,
             ActivityPollIntervalSeconds = 5,
-            MaxScreenshotAgeDays = 30,
+            MaxScreenshotAgeDays = 7,
             JpegQuality = 70,
             AlertOnLongIdle = true,
             LongIdleThresholdMinutes = 30,

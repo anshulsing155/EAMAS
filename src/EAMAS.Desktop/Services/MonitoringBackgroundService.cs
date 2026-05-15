@@ -18,6 +18,7 @@ namespace EAMAS.Desktop.Services
         private CancellationTokenSource? _cts;
         private Task? _activityTask;
         private Task? _screenshotTask;
+        private Task? _purgeTask;
 
         private string _currentOrgId  = string.Empty;
         private string _currentUserId = string.Empty;
@@ -64,6 +65,7 @@ namespace EAMAS.Desktop.Services
 
             _activityTask   = Task.Run(() => ActivityLoop(_cts.Token),   _cts.Token);
             _screenshotTask = Task.Run(() => ScreenshotLoop(_cts.Token), _cts.Token);
+            _purgeTask      = Task.Run(() => PurgeLoop(_cts.Token),      _cts.Token);
         }
 
         public void Stop()
@@ -209,9 +211,15 @@ namespace EAMAS.Desktop.Services
             while (!ct.IsCancellationRequested)
             {
                 var settings        = _settingsService.GetSettings(_currentOrgId);
-                var intervalMinutes = Math.Max(1, settings.ScreenshotIntervalMinutes);
+                var baseMinutes     = Math.Max(1, settings.ScreenshotIntervalMinutes);
 
-                await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct).ConfigureAwait(false);
+                // ±40 % random jitter so capture times are unpredictable.
+                // e.g. 5 min base → actual delay is anywhere from 3 to 7 minutes.
+                var jitter       = baseMinutes * 0.4;
+                var actualMinutes= baseMinutes + (Random.Shared.NextDouble() * 2 - 1) * jitter;
+                actualMinutes    = Math.Max(0.5, actualMinutes);  // never shorter than 30 s
+
+                await Task.Delay(TimeSpan.FromMinutes(actualMinutes), ct).ConfigureAwait(false);
                 if (ct.IsCancellationRequested) break;
 
                 try
@@ -222,6 +230,27 @@ namespace EAMAS.Desktop.Services
                 }
                 catch (TaskCanceledException) { return; }
                 catch { /* swallow individual screenshot failures */ }
+            }
+        }
+
+        // ── Purge Loop (runs once at startup + every 24 h) ───────────────────────
+
+        private async Task PurgeLoop(CancellationToken ct)
+        {
+            // Small initial delay so startup work finishes first
+            try { await Task.Delay(TimeSpan.FromSeconds(30), ct).ConfigureAwait(false); }
+            catch (TaskCanceledException) { return; }
+
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    _screenshotService.PurgeOldScreenshots(_currentOrgId);
+                }
+                catch { /* never crash the background service on a purge failure */ }
+
+                try { await Task.Delay(TimeSpan.FromHours(24), ct).ConfigureAwait(false); }
+                catch (TaskCanceledException) { return; }
             }
         }
 
