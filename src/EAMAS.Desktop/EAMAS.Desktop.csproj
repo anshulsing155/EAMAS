@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -16,13 +16,13 @@
     <PublishTrimmed>false</PublishTrimmed>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <!-- Version stamped into the assembly — UpdateService reads this to compare with remote -->
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
-    <Product>EAMAS — Employee Activity Monitoring &amp; Analytics System</Product>
+    <!-- Version stamped into the assembly â€” UpdateService reads this to compare with remote -->
+    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
+    <Product>EAMAS â€” Employee Activity Monitoring &amp; Analytics System</Product>
     <Company>EAMAS</Company>
-    <Copyright>Copyright © 2026 EAMAS</Copyright>
+    <Copyright>Copyright Â© 2026 EAMAS</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\EAMAS.Core\EAMAS.Core.csproj" />
@@ -32,3 +32,4 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
   </ItemGroup>
 </Project>
+

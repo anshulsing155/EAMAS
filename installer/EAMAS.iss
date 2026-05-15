@@ -1,9 +1,9 @@
-; EAMAS — Employee Activity Monitoring & Analytics System
+﻿; EAMAS â€” Employee Activity Monitoring & Analytics System
 ; Inno Setup 6 installer script
 
 #define AppName      "EAMAS"
 #define AppFullName  "Employee Activity Monitoring && Analytics System"
-#define AppVersion   "1.1.0"
+#define AppVersion   "1.1.1"
 #define AppPublisher "EAMAS"
 #define AppExeName   "EAMAS.exe"
 #define AppId        "{{3F8A2B1C-D4E5-4F67-8901-ABCDEF234567}"
@@ -31,7 +31,7 @@ UninstallDisplayIcon={app}\{#AppExeName}
 WizardStyle=modern
 WizardSizePercent=100
 
-; Compression – lzma2 ultra gives smallest file
+; Compression â€“ lzma2 ultra gives smallest file
 Compression=lzma2/ultra64
 SolidCompression=yes
 
@@ -53,7 +53,7 @@ AllowNoIcons=yes
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-; ── Optional tasks the user can tick/untick ─────────────────────────────────
+; â”€â”€ Optional tasks the user can tick/untick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Tasks]
 Name: "desktopicon"; \
@@ -66,21 +66,21 @@ Name: "startupitem"; \
   GroupDescription: "Startup:"; \
   Flags: unchecked
 
-; ── Files to install ────────────────────────────────────────────────────────
+; â”€â”€ Files to install â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Files]
-; Single self-contained executable — no .NET runtime required on target machine
+; Single self-contained executable â€” no .NET runtime required on target machine
 Source: "..\build\publish\{#AppExeName}"; \
   DestDir: "{app}"; \
   Flags: ignoreversion
 
-; ── Shortcuts ───────────────────────────────────────────────────────────────
+; â”€â”€ Shortcuts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Icons]
 ; Start Menu
 Name: "{group}\{#AppFullName}"; \
   Filename: "{app}\{#AppExeName}"; \
-  Comment: "Launch EAMAS – Employee Activity Monitoring"
+  Comment: "Launch EAMAS â€“ Employee Activity Monitoring"
 
 ; Uninstall entry in Start Menu
 Name: "{group}\Uninstall {#AppName}"; \
@@ -89,13 +89,13 @@ Name: "{group}\Uninstall {#AppName}"; \
 ; Desktop (optional task)
 Name: "{autodesktop}\{#AppName}"; \
   Filename: "{app}\{#AppExeName}"; \
-  Comment: "Launch EAMAS – Employee Activity Monitoring"; \
+  Comment: "Launch EAMAS â€“ Employee Activity Monitoring"; \
   Tasks: desktopicon
 
-; ── Registry ────────────────────────────────────────────────────────────────
+; â”€â”€ Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Registry]
-; Windows startup entry (optional task) — system-wide so every user gets EAMAS on login
+; Windows startup entry (optional task) â€” system-wide so every user gets EAMAS on login
 Root: HKLM; \
   Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; \
@@ -104,14 +104,14 @@ Root: HKLM; \
   Flags: uninsdeletevalue; \
   Tasks: startupitem
 
-; ── Run after install ───────────────────────────────────────────────────────
+; â”€â”€ Run after install â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Run]
 Filename: "{app}\{#AppExeName}"; \
   Description: "Launch {#AppFullName}"; \
   Flags: nowait postinstall skipifsilent
 
-; ── Uninstall: close the app first if running ───────────────────────────────
+; â”€â”€ Uninstall: close the app first if running â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [UninstallRun]
 Filename: "taskkill.exe"; \
@@ -119,7 +119,8 @@ Filename: "taskkill.exe"; \
   Flags: skipifdoesntexist runhidden; \
   RunOnceId: "KillEAMAS"
 
-; ── Custom messages ─────────────────────────────────────────────────────────
+; â”€â”€ Custom messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 [Messages]
 WelcomeLabel2=This will install [name/ver] on your computer.%n%nEAMAS monitors employee application usage and takes periodic screenshots for productivity tracking.%n%nIt is recommended that you close all other applications before continuing.
+

@@ -20,7 +20,7 @@ $candidates = @(
     "$env:LOCALAPPDATA\Programs\Inno Setup 6\iscc.exe",   # user-scoped install (winget default)
     "C:\Program Files (x86)\Inno Setup 6\iscc.exe",
     "C:\Program Files\Inno Setup 6\iscc.exe",
-    (Get-Command iscc -ErrorAction SilentlyContinue)?.Source
+    (Get-Command iscc -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
 )
 foreach ($c in $candidates) {
     if ($c -and (Test-Path $c)) { $IsccPath = $c; break }

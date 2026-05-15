@@ -33,6 +33,20 @@ namespace EAMAS.Desktop.ViewModels
 
     public class ActivityLogsViewModel : BaseViewModel
     {
+        // Pre-frozen brushes — safe to use from any thread
+        private static readonly System.Windows.Media.SolidColorBrush BrushProductive  = Frozen("#16A34A");
+        private static readonly System.Windows.Media.SolidColorBrush BrushDistracting = Frozen("#EF4444");
+        private static readonly System.Windows.Media.SolidColorBrush BrushNeutral     = Frozen("#3B82F6");
+        private static readonly System.Windows.Media.SolidColorBrush BrushIdle        = Frozen("#94A3B8");
+
+        private static System.Windows.Media.SolidColorBrush Frozen(string hex)
+        {
+            var b = new System.Windows.Media.SolidColorBrush(
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex));
+            b.Freeze();
+            return b;
+        }
+
         private readonly ActivityMonitorService _activityService;
         private readonly UserService _userService;
         private readonly OrganizationService _orgService;
@@ -225,31 +239,23 @@ namespace EAMAS.Desktop.ViewModels
                 var widthMin = (end - start).TotalMinutes;
                 if (widthMin < 0.5) continue;
 
-                var idleBrush = (System.Windows.Media.Brush)
-                    new System.Windows.Media.BrushConverter().ConvertFromString("#94A3B8")!;
-
                 segments.Add(new TimelineSegment
                 {
                     LeftMin  = leftMin,
                     WidthMin = widthMin,
-                    Fill     = log.IsIdle ? idleBrush : CategoryFill(log.Category),
+                    Fill     = log.IsIdle ? BrushIdle : CategoryFill(log.Category),
                     Tooltip  = $"{start:HH:mm} – {end:HH:mm}  {log.ApplicationName}  ({FormatDuration(end - start)})"
                 });
             }
             return segments;
         }
 
-        private static System.Windows.Media.Brush CategoryFill(ActivityCategory cat)
+        private static System.Windows.Media.Brush CategoryFill(ActivityCategory cat) => cat switch
         {
-            var hex = cat switch
-            {
-                ActivityCategory.Productive  => "#16A34A",
-                ActivityCategory.Distracting => "#EF4444",
-                ActivityCategory.Neutral     => "#3B82F6",
-                _                            => "#94A3B8"
-            };
-            return (System.Windows.Media.Brush)
-                new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;
-        }
+            ActivityCategory.Productive  => BrushProductive,
+            ActivityCategory.Distracting => BrushDistracting,
+            ActivityCategory.Neutral     => BrushNeutral,
+            _                            => BrushIdle
+        };
     }
 }
