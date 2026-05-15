@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace EAMAS.Core.Models
 {
+    [BsonIgnoreExtraElements]
     public class ScreenshotRecord
     {
         [BsonId]

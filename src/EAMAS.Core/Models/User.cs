@@ -11,6 +11,7 @@ namespace EAMAS.Core.Models
     /// </summary>
     public enum UserRole { SuperAdmin, Admin, Manager, Employee }
 
+    [BsonIgnoreExtraElements]
     public class User
     {
         [BsonId]
