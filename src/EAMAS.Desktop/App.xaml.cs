@@ -187,13 +187,20 @@ namespace EAMAS.Desktop
                     var update = await svc.CheckForUpdateAsync().ConfigureAwait(false);
                     if (update == null) return;
 
-                    _pendingUpdate = update;
-
-                    // Marshal to the UI thread to update the tray
-                    Current.Dispatcher.Invoke(() => (Current as App)?.ShowUpdateNotification(update));
+                    SetPendingUpdate(update);
                 }
                 catch { /* update check must never crash the app */ }
             });
+        }
+
+        /// <summary>
+        /// Stores a pending update found by any code path (auto-check or manual Settings check)
+        /// and shows the tray notification once.
+        /// </summary>
+        public static void SetPendingUpdate(UpdateInfo update)
+        {
+            _pendingUpdate = update;
+            Current.Dispatcher.Invoke(() => (Current as App)?.ShowUpdateNotification(update));
         }
 
         private void ShowUpdateNotification(UpdateInfo update)
@@ -206,7 +213,7 @@ namespace EAMAS.Desktop
                 _updateMenuItem = new System.Windows.Forms.ToolStripMenuItem(
                     $"⬆  Update to v{update.Version} — click to install",
                     null,
-                    (_, _) => DownloadUpdate());
+                    async (_, _) => await DownloadUpdate());
                 _updateMenuItem.Font = new System.Drawing.Font(
                     _updateMenuItem.Font, System.Drawing.FontStyle.Bold);
                 _updateMenuItem.ForeColor = System.Drawing.Color.FromArgb(37, 99, 235);
@@ -225,23 +232,96 @@ namespace EAMAS.Desktop
             _trayIcon.ShowBalloonTip(10000);
         }
 
-        private static void DownloadUpdate()
+        public static async Task DownloadUpdate()
         {
             if (_pendingUpdate == null) return;
+            var update = _pendingUpdate;
 
             var result = System.Windows.MessageBox.Show(
-                $"EAMAS {_pendingUpdate.Version} is available.\n\n" +
-                $"{_pendingUpdate.ReleaseNotes}\n\n" +
-                "The installer will download and run automatically.\nEAMAS will close and restart after the update.",
+                $"EAMAS {update.Version} is available.\n\n" +
+                $"{update.ReleaseNotes}\n\n" +
+                "The installer will download and run automatically.\n" +
+                "EAMAS will close and restart after the update.",
                 "Install Update",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information);
 
             if (result != MessageBoxResult.OK) return;
 
+            // Build a progress window
+            Window? progressWin = null;
+            System.Windows.Controls.ProgressBar? progressBar = null;
+            System.Windows.Controls.TextBlock? statusLabel = null;
+
+            Current.Dispatcher.Invoke(() =>
+            {
+                var titleLabel = new System.Windows.Controls.TextBlock
+                {
+                    Text = $"Downloading EAMAS {update.Version}",
+                    FontSize = 15,
+                    FontWeight = FontWeights.SemiBold,
+                    Margin = new Thickness(0, 0, 0, 12)
+                };
+                statusLabel = new System.Windows.Controls.TextBlock
+                {
+                    Text = "Starting download...",
+                    FontSize = 12,
+                    Foreground = System.Windows.Media.Brushes.Gray,
+                    Margin = new Thickness(0, 0, 0, 10)
+                };
+                progressBar = new System.Windows.Controls.ProgressBar
+                {
+                    Height = 18,
+                    Minimum = 0,
+                    Maximum = 100,
+                    Value = 0
+                };
+                var panel = new System.Windows.Controls.StackPanel
+                {
+                    Margin = new Thickness(28, 24, 28, 24)
+                };
+                panel.Children.Add(titleLabel);
+                panel.Children.Add(statusLabel);
+                panel.Children.Add(progressBar);
+
+                progressWin = new Window
+                {
+                    Title = "EAMAS — Downloading Update",
+                    Width = 440,
+                    Height = 165,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                    ResizeMode = ResizeMode.NoResize,
+                    ShowInTaskbar = true,
+                    Content = panel
+                };
+                progressWin.Show();
+            });
+
             var svc = new UpdateService();
-            // Fire-and-forget — ExitApp() is called inside DownloadAndInstallAsync once done
-            Task.Run(() => svc.DownloadAndInstallAsync(_pendingUpdate.DownloadUrl));
+            var progress = new Progress<int>(pct => Current.Dispatcher.Invoke(() =>
+            {
+                if (progressBar != null) progressBar.Value = pct;
+                if (statusLabel != null) statusLabel.Text = $"Downloading... {pct}%";
+            }));
+
+            try
+            {
+                await svc.DownloadAndInstallAsync(update.DownloadUrl, progress);
+                // ExitApp() is called inside DownloadAndInstallAsync after launch
+            }
+            catch (Exception ex)
+            {
+                Current.Dispatcher.Invoke(() =>
+                {
+                    progressWin?.Close();
+                    System.Windows.MessageBox.Show(
+                        $"Failed to download the update:\n\n{ex.Message}\n\n" +
+                        "Please try again later or download manually from GitHub.",
+                        "Update Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
+            }
         }
 
         private void ShowMainWindow()

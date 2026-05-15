@@ -288,6 +288,51 @@
                 </StackPanel>
             </Border>
 
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 SOFTWARE UPDATE
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="Software Update" Style="{StaticResource HeadingMedium}"
+                               FontSize="15" Margin="0,0,0,16"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Version info + status -->
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="INSTALLED VERSION" Style="{StaticResource SecondaryText}"
+                                           FontSize="10" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding CurrentAppVersion}"
+                                           Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
+                            </StackPanel>
+
+                            <!-- Status (hidden when empty) -->
+                            <TextBlock Text="{Binding UpdateStatusMessage}"
+                                       Style="{StaticResource SecondaryText}" FontSize="12"
+                                       Visibility="{Binding UpdateStatusMessage,
+                                           Converter={StaticResource MsgVis}}"/>
+                        </StackPanel>
+
+                        <!-- Action buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Check for Updates"
+                                    Command="{Binding CheckForUpdatesCommand}"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Margin="0,0,8,0"
+                                    IsEnabled="{Binding IsCheckingUpdate, Converter={StaticResource InvBool}}"/>
+                            <Button Content="Install Update"
+                                    Command="{Binding InstallUpdateCommand}"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
             <!-- ── Save button ─────────────────────────────────────────────────── -->
             <Button Content="Save All Settings" Style="{StaticResource PrimaryButton}"
                     Command="{Binding SaveSettingsCommand}"

@@ -1,5 +1,6 @@
 using EAMAS.Core.Models;
 using EAMAS.Core.Services;
+using EAMAS.Desktop.Services;
 using Microsoft.Win32;
 
 namespace EAMAS.Desktop.ViewModels
@@ -45,6 +46,11 @@ namespace EAMAS.Desktop.ViewModels
         private string _statusMessage = string.Empty;
         private bool _isSaving;
 
+        // ── Software update ───────────────────────────────────────────────────────
+        private string _updateStatusMessage = string.Empty;
+        private bool _updateAvailable;
+        private bool _isCheckingUpdate;
+
         // ── Monitoring properties ─────────────────────────────────────────────────
         public bool MonitoringEnabled    { get => _monitoringEnabled; set => Set(ref _monitoringEnabled, value); }
         public bool ScreenshotsEnabled   { get => _screenshotsEnabled; set => Set(ref _screenshotsEnabled, value); }
@@ -76,6 +82,19 @@ namespace EAMAS.Desktop.ViewModels
         public string StatusMessage { get => _statusMessage; set => Set(ref _statusMessage, value); }
         public bool   IsSaving      { get => _isSaving; set => Set(ref _isSaving, value); }
 
+        // ── Software update ───────────────────────────────────────────────────────
+        public string CurrentAppVersion
+        {
+            get
+            {
+                var v = UpdateService.CurrentVersion;
+                return $"v{v.Major}.{v.Minor}.{v.Build}";
+            }
+        }
+        public string UpdateStatusMessage { get => _updateStatusMessage; set => Set(ref _updateStatusMessage, value); }
+        public bool   UpdateAvailable     { get => _updateAvailable;     set => Set(ref _updateAvailable, value); }
+        public bool   IsCheckingUpdate    { get => _isCheckingUpdate;    set => Set(ref _isCheckingUpdate, value); }
+
         public bool RunOnStartup
         {
             get => _runOnStartup;
@@ -90,9 +109,11 @@ namespace EAMAS.Desktop.ViewModels
         public string CurrentOrgName  => App.CurrentOrganization?.Name ?? "System";
         public bool   ConsentGiven    => App.CurrentUser?.ConsentGiven ?? false;
 
-        public RelayCommand SaveSettingsCommand { get; }
-        public RelayCommand ChangePasswordCommand { get; }
-        public RelayCommand RevokeConsentCommand { get; }
+        public RelayCommand      SaveSettingsCommand    { get; }
+        public RelayCommand      ChangePasswordCommand  { get; }
+        public RelayCommand      RevokeConsentCommand   { get; }
+        public AsyncRelayCommand CheckForUpdatesCommand { get; }
+        public AsyncRelayCommand InstallUpdateCommand   { get; }
 
         public SettingsViewModel(SettingsService settingsService, UserService userService,
             AuditLogService auditLogService)
@@ -101,10 +122,14 @@ namespace EAMAS.Desktop.ViewModels
             _userService     = userService;
             _auditLogService = auditLogService;
 
-            SaveSettingsCommand  = new RelayCommand(SaveSettings, () => IsAdmin);
+            SaveSettingsCommand   = new RelayCommand(SaveSettings, () => IsAdmin);
             ChangePasswordCommand = new RelayCommand(
                 () => ChangePassword(_currentPassword, _newPassword, _confirmPassword));
-            RevokeConsentCommand = new RelayCommand(RevokeConsent, () => IsEmployee && ConsentGiven);
+            RevokeConsentCommand  = new RelayCommand(RevokeConsent, () => IsEmployee && ConsentGiven);
+            CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync,
+                () => !_isCheckingUpdate);
+            InstallUpdateCommand  = new AsyncRelayCommand(
+                () => App.DownloadUpdate(), () => _updateAvailable);
         }
 
         public void Initialize()
@@ -239,6 +264,38 @@ namespace EAMAS.Desktop.ViewModels
 
             _userService.SetConsent(App.CurrentUser!.Id, false);
             App.ExitApp();
+        }
+
+        // ── Software update ───────────────────────────────────────────────────────
+
+        private async Task CheckForUpdatesAsync()
+        {
+            IsCheckingUpdate = true;
+            UpdateStatusMessage = "Checking for updates...";
+            UpdateAvailable = false;
+            try
+            {
+                var svc = new UpdateService();
+                var update = await svc.CheckForUpdateAsync().ConfigureAwait(false);
+                if (update != null)
+                {
+                    App.SetPendingUpdate(update);
+                    UpdateAvailable = true;
+                    UpdateStatusMessage = $"Version {update.Version} is available.";
+                }
+                else
+                {
+                    UpdateStatusMessage = $"You are up to date ({CurrentAppVersion}).";
+                }
+            }
+            catch
+            {
+                UpdateStatusMessage = "Could not reach the update server. Check your connection.";
+            }
+            finally
+            {
+                IsCheckingUpdate = false;
+            }
         }
 
         // ── Windows Startup Registry ──────────────────────────────────────────────

@@ -25,7 +25,12 @@ namespace EAMAS.Desktop.Services
 
         private static readonly HttpClient _http = new()
         {
-            Timeout = TimeSpan.FromSeconds(15)
+            Timeout = TimeSpan.FromSeconds(15)   // for manifest check only
+        };
+
+        private static readonly HttpClient _downloadHttp = new()
+        {
+            Timeout = Timeout.InfiniteTimeSpan   // download can be 50+ MB
         };
 
         /// <summary>The version currently installed (read from assembly metadata).</summary>
@@ -65,7 +70,7 @@ namespace EAMAS.Desktop.Services
             var filename = "EAMAS-Update-Setup.exe";
             var dest = Path.Combine(Path.GetTempPath(), filename);
 
-            using var response = await _http.GetAsync(
+            using var response = await _downloadHttp.GetAsync(
                 downloadUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
