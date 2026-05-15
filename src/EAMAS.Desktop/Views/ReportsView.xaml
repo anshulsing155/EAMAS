@@ -19,7 +19,43 @@
             <!-- ── Header + export buttons ─────────────────────────────────────── -->
             <Grid Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="Reports &amp; Analytics" Style="{StaticResource HeadingLarge}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Reports &amp; Analytics" Style="{StaticResource HeadingLarge}"/>
+                        <Button Command="{Binding OpenMethodologyCommand}"
+                                ToolTip="Activity Measurement Guide — how categories and scores are calculated"
+                                Width="22" Height="22" Margin="8,0,0,0" VerticalAlignment="Center"
+                                Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1"
+                                Cursor="Hand" Padding="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="#EFF6FF"/>
+                                    <Setter Property="BorderBrush" Value="#BFDBFE"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                        CornerRadius="11">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#DBEAFE"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="?" FontSize="12" FontWeight="Bold"
+                                       Foreground="#1E40AF" VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
                     <TextBlock Text="{Binding SummaryLabel}" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">

@@ -2,6 +2,7 @@ using EAMAS.Core.Enums;
 using EAMAS.Core.Models;
 using EAMAS.Core.Services;
 using EAMAS.Desktop.Services;
+using EAMAS.Desktop.Views;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
@@ -80,10 +81,11 @@ namespace EAMAS.Desktop.ViewModels
         public bool IsAdmin   => App.CurrentUser?.Role is UserRole.Admin or UserRole.SuperAdmin;
         public bool IsManager => App.CurrentUser?.Role is UserRole.Manager or UserRole.Admin or UserRole.SuperAdmin;
 
-        public RelayCommand      GenerateCommand   { get; }
-        public RelayCommand      ExportCsvCommand  { get; }
-        public AsyncRelayCommand ExportExcelCommand{ get; }
-        public AsyncRelayCommand ExportPdfCommand  { get; }
+        public RelayCommand      GenerateCommand       { get; }
+        public RelayCommand      ExportCsvCommand      { get; }
+        public AsyncRelayCommand ExportExcelCommand    { get; }
+        public AsyncRelayCommand ExportPdfCommand      { get; }
+        public RelayCommand      OpenMethodologyCommand{ get; }
 
         public ReportsViewModel(ReportService reportService, AnalyticsService analyticsService,
             UserService userService)
@@ -92,10 +94,11 @@ namespace EAMAS.Desktop.ViewModels
             _analyticsService = analyticsService;
             _userService      = userService;
 
-            GenerateCommand    = new RelayCommand(Generate);
-            ExportCsvCommand   = new RelayCommand(ExportCsv,   () => _lastBundle != null && !_isLoading);
-            ExportExcelCommand = new AsyncRelayCommand(ExportExcelAsync, () => _lastBundle != null && !_isLoading);
-            ExportPdfCommand   = new AsyncRelayCommand(ExportPdfAsync,   () => _lastBundle != null && !_isLoading);
+            GenerateCommand        = new RelayCommand(Generate);
+            ExportCsvCommand       = new RelayCommand(ExportCsv,   () => _lastBundle != null && !_isLoading);
+            ExportExcelCommand     = new AsyncRelayCommand(ExportExcelAsync, () => _lastBundle != null && !_isLoading);
+            ExportPdfCommand       = new AsyncRelayCommand(ExportPdfAsync,   () => _lastBundle != null && !_isLoading);
+            OpenMethodologyCommand = new RelayCommand(OpenMethodology);
         }
 
         public void Initialize()
@@ -286,6 +289,35 @@ namespace EAMAS.Desktop.ViewModels
                 }
             }
 
+            // Methodology block
+            sb.AppendLine();
+            sb.AppendLine("ACTIVITY MEASUREMENT GUIDE");
+            sb.AppendLine();
+            sb.AppendLine("CATEGORY,DEFINITION,SCORE IMPACT");
+            sb.AppendLine("Productive,\"Active window matches a work-related application (IDE, Office, email, meetings, terminal, design, version control)\",+POSITIVE — raises score");
+            sb.AppendLine("Distracting,\"Active window matches a non-work application (social media, streaming, gaming, entertainment)\",−NEGATIVE — lowers score");
+            sb.AppendLine("Neutral,\"Active window is neither work-related nor clearly distracting (File Explorer, Calculator, Notepad, Spotify, unrecognised apps)\",NONE — not counted");
+            sb.AppendLine("Idle,\"No keyboard or mouse input detected for the configured idle threshold\",EXCLUDED — not part of Active Time");
+            sb.AppendLine();
+            sb.AppendLine("PRODUCTIVITY SCORE FORMULA");
+            sb.AppendLine("Score = ( Productive Time / Active Time ) x 100");
+            sb.AppendLine("Active Time = all time with keyboard or mouse input (idle excluded from denominator)");
+            sb.AppendLine("Score Bands: >= 70% Excellent | 40-69% Acceptable | < 40% Needs Attention");
+            sb.AppendLine();
+            sb.AppendLine("BUILT-IN PRODUCTIVE APPS");
+            sb.AppendLine("Dev Editors,\"VS Code, Visual Studio, Rider, IntelliJ, PyCharm, WebStorm, CLion, Android Studio, Notepad++, Sublime Text, Atom, Eclipse, NetBeans\"");
+            sb.AppendLine("Office Suite,\"Excel, Word, PowerPoint, OneNote, Outlook\"");
+            sb.AppendLine("Communication,\"Microsoft Teams, Slack, Zoom\"");
+            sb.AppendLine("Dev Tools,\"Postman, Insomnia, DBeaver, SSMS, CMD, PowerShell, Windows Terminal, Git, GitHub Desktop, SourceTree\"");
+            sb.AppendLine("Design & Creative,\"Figma, Adobe apps, Blender\"");
+            sb.AppendLine();
+            sb.AppendLine("BUILT-IN DISTRACTING APPS");
+            sb.AppendLine("Video Streaming,\"YouTube, Netflix, Amazon Prime, Disney+, Twitch, VLC\"");
+            sb.AppendLine("Social Media,\"TikTok, Instagram, Facebook, Twitter/X, Reddit\"");
+            sb.AppendLine("Gaming,\"Steam, Epic Games, League of Legends, Valorant\"");
+            sb.AppendLine();
+            sb.AppendLine("Custom rules can be added in Settings > App Categories to override or extend these defaults.");
+
             File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
             System.Windows.MessageBox.Show($"CSV report saved to:\n{dlg.FileName}", "Export Complete",
                 MessageBoxButton.OK, MessageBoxImage.Information);
@@ -353,6 +385,15 @@ namespace EAMAS.Desktop.ViewModels
                             MessageBoxButton.OK, MessageBoxImage.Error));
                 }
             });
+        }
+
+        private static void OpenMethodology()
+        {
+            var win = new ActivityMethodologyWindow
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            win.ShowDialog();
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────

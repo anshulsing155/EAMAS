@@ -64,8 +64,9 @@ namespace EAMAS.Desktop.Services
             AddAppUsageSheet(wb, r);
             AddCategorySheet(wb, r);
             AddHourlySheet(wb, r);
-            if (r.Alerts.Any())   AddAlertsSheet(wb, r);
+            if (r.Alerts.Any())    AddAlertsSheet(wb, r);
             if (r.AuditLogs.Any()) AddAuditSheet(wb, r);
+            AddMethodologySheet(wb);
 
             wb.SaveAs(path);
         }
@@ -327,6 +328,180 @@ namespace EAMAS.Desktop.Services
             AutofitColumns(ws, 4);
         }
 
+        private static void AddMethodologySheet(XLWorkbook wb)
+        {
+            var ws = wb.Worksheets.Add("Methodology");
+            ws.ShowGridLines = false;
+
+            // Title
+            ws.Cell(1, 1).Value = "Activity Measurement Guide";
+            ws.Cell(1, 1).Style.Font.Bold = true;
+            ws.Cell(1, 1).Style.Font.FontSize = 15;
+            ws.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#1E40AF");
+            ws.Range(1, 1, 1, 4).Merge();
+
+            ws.Cell(2, 1).Value = "How EAMAS tracks, categorises, and scores employee activity";
+            ws.Cell(2, 1).Style.Font.FontSize = 10;
+            ws.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#64748B");
+            ws.Range(2, 1, 2, 4).Merge();
+
+            int row = 4;
+            void Section(string title)
+            {
+                ws.Cell(row, 1).Value = title;
+                ws.Cell(row, 1).Style.Font.Bold = true;
+                ws.Cell(row, 1).Style.Font.FontSize = 12;
+                ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#1E40AF");
+                ws.Range(row, 1, row, 4).Merge();
+                ws.Range(row, 1, row, 4).Style.Fill.BackgroundColor = XLColor.FromHtml("#EFF6FF");
+                row++;
+            }
+            void Row2(string label, string desc, string? hex = null)
+            {
+                ws.Cell(row, 1).Value = label;
+                ws.Cell(row, 1).Style.Font.Bold = true;
+                if (hex != null) ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml(hex);
+                ws.Cell(row, 2).Value = desc;
+                ws.Range(row, 2, row, 4).Merge();
+                ws.Cell(row, 2).Style.Alignment.WrapText = true;
+                AlternateRow(ws, row, 4);
+                row++;
+            }
+
+            // ── 1. Time Categories
+            Section("1 — Time Categories");
+            ws.Cell(row, 1).Value = "Category";
+            ws.Cell(row, 2).Value = "Definition";
+            ws.Cell(row, 3).Value = "Score Impact";
+            ws.Range(row, 1, row, 1).Style.Font.Bold = true;
+            ws.Range(row, 2, row, 2).Style.Font.Bold = true;
+            ws.Range(row, 3, row, 3).Style.Font.Bold = true;
+            row++;
+
+            ws.Cell(row, 1).Value = "Productive";
+            ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#16A34A");
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = "Active window matches a work-related application (IDE, Office, email, meetings, terminal, design tools, version control)";
+            ws.Cell(row, 3).Value = "+POSITIVE — raises score";
+            ws.Cell(row, 3).Style.Font.FontColor = XLColor.FromHtml("#16A34A");
+            ws.Range(row, 2, row, 2).Style.Alignment.WrapText = true;
+            AlternateRow(ws, row, 4); row++;
+
+            ws.Cell(row, 1).Value = "Distracting";
+            ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#DC2626");
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = "Active window matches a non-work application (social media, streaming, gaming, entertainment)";
+            ws.Cell(row, 3).Value = "−NEGATIVE — lowers score";
+            ws.Cell(row, 3).Style.Font.FontColor = XLColor.FromHtml("#DC2626");
+            ws.Range(row, 2, row, 2).Style.Alignment.WrapText = true;
+            AlternateRow(ws, row, 4); row++;
+
+            ws.Cell(row, 1).Value = "Neutral";
+            ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#D97706");
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = "Active window is neither work-related nor clearly distracting (File Explorer, Calculator, Notepad, Spotify, any unrecognised app)";
+            ws.Cell(row, 3).Value = "NONE — not counted in score";
+            ws.Cell(row, 3).Style.Font.FontColor = XLColor.FromHtml("#D97706");
+            ws.Range(row, 2, row, 2).Style.Alignment.WrapText = true;
+            AlternateRow(ws, row, 4); row++;
+
+            ws.Cell(row, 1).Value = "Idle";
+            ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#94A3B8");
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = "No keyboard or mouse input detected for the configured idle threshold. User may be away from desk, reading, or in a meeting.";
+            ws.Cell(row, 3).Value = "EXCLUDED — not part of Active Time";
+            ws.Cell(row, 3).Style.Font.FontColor = XLColor.FromHtml("#94A3B8");
+            ws.Range(row, 2, row, 2).Style.Alignment.WrapText = true;
+            AlternateRow(ws, row, 4); row++;
+
+            row++;  // blank spacer
+
+            // ── 2. Productivity Score Formula
+            Section("2 — Productivity Score Formula");
+            ws.Cell(row, 1).Value = "Formula";
+            ws.Cell(row, 2).Value = "Score = ( Productive Time ÷ Active Time ) × 100";
+            ws.Cell(row, 2).Style.Font.Bold = true;
+            ws.Cell(row, 2).Style.Font.FontSize = 11;
+            ws.Cell(row, 2).Style.Font.FontColor = XLColor.FromHtml("#1E40AF");
+            ws.Range(row, 2, row, 4).Merge();
+            row++;
+            ws.Cell(row, 1).Value = "Active Time";
+            ws.Cell(row, 2).Value = "All time with keyboard or mouse input detected — Idle periods are excluded from the denominator";
+            ws.Range(row, 2, row, 4).Merge();
+            ws.Cell(row, 2).Style.Alignment.WrapText = true;
+            AlternateRow(ws, row, 4); row++;
+
+            Row2("≥ 70%  Excellent",      "Employee spending most active time on work tools", "#16A34A");
+            Row2("40 – 69%  Acceptable",  "Mix of productive and neutral/distracting time",   "#D97706");
+            Row2("< 40%  Needs Attention", "Significant share of active time on distracting apps", "#DC2626");
+
+            row++;  // blank spacer
+
+            // ── 3. Tracking Method
+            Section("3 — How Activity Is Tracked");
+            Row2("Active Window Sampling", "EAMAS reads the foreground window (app name + window title) at regular intervals. Each interval is tagged with a category based on keyword matching.");
+            Row2("Idle Detection",          "Time since last keyboard keystroke or mouse movement is monitored. When input has not been detected beyond the threshold, the session is flagged Idle.");
+            Row2("Screenshot Capture",      "Screenshots are captured at a configurable interval during active sessions (default every 5 minutes). Privacy blur can be enabled in Settings.");
+            Row2("Categorisation Priority", "Custom rules from your administrator are checked first. Built-in rules apply when no custom rule matches. Unrecognised apps default to Neutral.");
+
+            row++;  // blank spacer
+
+            // ── 4. Built-in Productive Apps
+            Section("4 — Built-in Productive Applications");
+            void AppRow(string group, string apps)
+            {
+                ws.Cell(row, 1).Value = group;
+                ws.Cell(row, 1).Style.Font.Bold = true;
+                ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#15803D");
+                ws.Cell(row, 2).Value = apps;
+                ws.Range(row, 2, row, 4).Merge();
+                ws.Cell(row, 2).Style.Alignment.WrapText = true;
+                AlternateRow(ws, row, 4); row++;
+            }
+            AppRow("Dev / Code Editors",    "VS Code, Visual Studio, Rider, IntelliJ IDEA, PyCharm, WebStorm, CLion, Android Studio, Notepad++, Sublime Text, Atom, Eclipse, NetBeans");
+            AppRow("Microsoft Office",       "Excel, Word (winword), PowerPoint (powerpnt), OneNote, Outlook");
+            AppRow("Communication",          "Microsoft Teams, Slack, Zoom");
+            AppRow("Dev Tools & Terminal",   "Postman, Insomnia, DBeaver, SSMS, CMD, PowerShell, Windows Terminal (wt), Git, GitHub Desktop, SourceTree");
+            AppRow("Design & Creative",      "Figma, Adobe apps, Blender");
+
+            row++;  // blank spacer
+
+            // ── 5. Built-in Distracting Apps
+            Section("5 — Built-in Distracting Applications");
+            void DistRow(string group, string apps)
+            {
+                ws.Cell(row, 1).Value = group;
+                ws.Cell(row, 1).Style.Font.Bold = true;
+                ws.Cell(row, 1).Style.Font.FontColor = XLColor.FromHtml("#B91C1C");
+                ws.Cell(row, 2).Value = apps;
+                ws.Range(row, 2, row, 4).Merge();
+                ws.Cell(row, 2).Style.Alignment.WrapText = true;
+                AlternateRow(ws, row, 4); row++;
+            }
+            DistRow("Video Streaming",  "YouTube, Netflix, Amazon Prime, Disney+, Twitch, VLC");
+            DistRow("Social Media",     "TikTok, Instagram, Facebook, Twitter/X, Reddit");
+            DistRow("Gaming",           "Steam, Epic Games, League of Legends, Valorant");
+
+            row++;  // blank spacer
+
+            // ── 6. Custom rules note
+            Section("6 — Custom Rules");
+            ws.Cell(row, 1).Value = "Administrator Custom Rules";
+            ws.Cell(row, 2).Value = "Administrators can add, edit, or delete custom keyword rules under Settings → App Categories. Custom rules always take priority over built-in rules. Any application not matched by any rule defaults to Neutral.";
+            ws.Range(row, 2, row, 4).Merge();
+            ws.Cell(row, 2).Style.Alignment.WrapText = true;
+            AlternateRow(ws, row, 4);
+
+            // Column widths
+            ws.Column(1).Width = 28;
+            ws.Column(2).Width = 60;
+            ws.Column(3).Width = 28;
+            ws.Column(4).Width = 10;
+
+            // Freeze row 1
+            ws.SheetView.FreezeRows(1);
+        }
+
         private static void AddAuditSheet(XLWorkbook wb, ReportBundle r)
         {
             var ws = wb.Worksheets.Add("Audit Log");
@@ -436,6 +611,9 @@ namespace EAMAS.Desktop.Services
                 // ── Audit log
                 if (r.AuditLogs.Any())
                     col.Item().Element(x => PdfAuditTable(x, r));
+
+                // ── Methodology / How to read this report
+                col.Item().Element(x => PdfMethodologySection(x));
             });
         }
 
@@ -676,6 +854,148 @@ namespace EAMAS.Desktop.Services
                         PdfCell(t, $"{prodPct:F0}%", bg, center: true);
                     }
                 });
+            });
+        }
+
+        private static void PdfMethodologySection(IContainer c)
+        {
+            c.Column(col =>
+            {
+                col.Item().Text("Appendix — Activity Measurement Guide")
+                    .FontSize(12).Bold().FontColor("#1E40AF");
+                col.Item().PaddingTop(4).Text(
+                    "How EAMAS tracks, categorises, and scores employee activity")
+                    .FontSize(8).FontColor("#64748B");
+
+                col.Item().PaddingTop(10)
+                    .Text("1 — Time Categories").FontSize(10).Bold().FontColor("#1E40AF");
+
+                // Category table
+                col.Item().PaddingTop(4).Table(t =>
+                {
+                    t.ColumnsDefinition(cd =>
+                    {
+                        cd.RelativeColumn(2);
+                        cd.RelativeColumn(5);
+                        cd.RelativeColumn(3);
+                    });
+
+                    PdfTableHeader(t, new[] { "CATEGORY", "DEFINITION", "SCORE IMPACT" });
+
+                    void CatRow(string name, string def, string impact,
+                        string nameColor, string impactColor, string bg)
+                    {
+                        t.Cell().Background(bg).Padding(5)
+                            .Text(name).Bold().FontSize(8).FontColor(nameColor);
+                        t.Cell().Background(bg).Padding(5)
+                            .Text(def).FontSize(8);
+                        t.Cell().Background(bg).Padding(5).AlignCenter()
+                            .Text(impact).FontSize(8).Bold().FontColor(impactColor);
+                    }
+
+                    CatRow("Productive",
+                        "Active window matches a work-related application — IDE, Office, email, meetings, terminal, design, version control.",
+                        "+POSITIVE — raises score",
+                        "#16A34A", "#16A34A", "#F0FDF4");
+
+                    CatRow("Distracting",
+                        "Active window matches a non-work application — social media, streaming, gaming, or entertainment.",
+                        "−NEGATIVE — lowers score",
+                        "#DC2626", "#DC2626", "#FEF2F2");
+
+                    CatRow("Neutral",
+                        "Active window is neither work-related nor clearly distracting — File Explorer, Calculator, Notepad, Spotify, any unrecognised app.",
+                        "NONE — excluded from score",
+                        "#D97706", "#D97706", "#FFFBEB");
+
+                    CatRow("Idle",
+                        "No keyboard or mouse input detected for the configured threshold. User may be away, in a meeting, or reading.",
+                        "EXCLUDED — not Active Time",
+                        "#64748B", "#64748B", "#F8FAFC");
+                });
+
+                // Score formula
+                col.Item().PaddingTop(10)
+                    .Text("2 — Productivity Score Formula").FontSize(10).Bold().FontColor("#1E40AF");
+                col.Item().PaddingTop(4).Background("#EFF6FF").Padding(8).Text(
+                    "Score  =  ( Productive Time  ÷  Active Time )  ×  100")
+                    .FontFamily("Courier New").FontSize(10).Bold().FontColor("#1E40AF");
+                col.Item().PaddingTop(4).Text(
+                    "Active Time = all time with keyboard or mouse input detected. Idle periods are excluded from this denominator.")
+                    .FontSize(8).FontColor("#374151");
+                col.Item().PaddingTop(6).Table(t =>
+                {
+                    t.ColumnsDefinition(cd =>
+                    {
+                        cd.RelativeColumn(2);
+                        cd.RelativeColumn(5);
+                    });
+                    PdfTableHeader(t, new[] { "BAND", "MEANING" });
+                    PdfCell(t, "≥ 70%  Excellent",       "#F0FDF4", bold: true);
+                    PdfCell(t, "Most active time spent on work-related tools", "#F0FDF4");
+                    PdfCell(t, "40–69%  Acceptable",      "#FFFBEB", bold: true);
+                    PdfCell(t, "Mix of productive and neutral/distracting time", "#FFFBEB");
+                    PdfCell(t, "< 40%  Needs Attention",  "#FEF2F2", bold: true);
+                    PdfCell(t, "Significant share of active time on distracting applications", "#FEF2F2");
+                });
+
+                // Tracking method
+                col.Item().PaddingTop(10)
+                    .Text("3 — How Activity Is Tracked").FontSize(10).Bold().FontColor("#1E40AF");
+                col.Item().PaddingTop(4).Table(t =>
+                {
+                    t.ColumnsDefinition(cd =>
+                    {
+                        cd.RelativeColumn(2.5f);
+                        cd.RelativeColumn(7);
+                    });
+                    PdfTableHeader(t, new[] { "MECHANISM", "DESCRIPTION" });
+                    PdfCell(t, "Active Window Sampling", "#F8FAFC", bold: true);
+                    PdfCell(t, "EAMAS reads the foreground window (application name and window title) at regular intervals. Each interval is assigned a category by keyword matching.", "#F8FAFC");
+                    PdfCell(t, "Idle Detection", "#FFFFFF", bold: true);
+                    PdfCell(t, "The system tracks time since the last keyboard keystroke or mouse movement. Sessions with no input beyond the configured threshold are marked Idle and excluded from the productivity score.", "#FFFFFF");
+                    PdfCell(t, "Screenshot Capture", "#F8FAFC", bold: true);
+                    PdfCell(t, "Screenshots are captured at a configurable interval during active sessions (default every 5 minutes). Privacy blur can be enabled in Settings.", "#F8FAFC");
+                    PdfCell(t, "Categorisation Priority", "#FFFFFF", bold: true);
+                    PdfCell(t, "Custom rules set by your administrator are checked first and always take priority. Built-in rules apply when no custom rule matches. Unrecognised applications default to Neutral.", "#FFFFFF");
+                });
+
+                // Built-in app list
+                col.Item().PaddingTop(10)
+                    .Text("4 — Built-in Application Classifications").FontSize(10).Bold().FontColor("#1E40AF");
+                col.Item().PaddingTop(4).Table(t =>
+                {
+                    t.ColumnsDefinition(cd =>
+                    {
+                        cd.RelativeColumn(2);
+                        cd.ConstantColumn(60);
+                        cd.RelativeColumn(6);
+                    });
+                    PdfTableHeader(t, new[] { "GROUP", "TYPE", "APPLICATIONS" });
+
+                    void AppRow(string group, string type, string apps, string typeBg, string typeColor)
+                    {
+                        var bg = "#F8FAFC";
+                        PdfCell(t, group, bg, bold: true);
+                        t.Cell().Background(typeBg).Padding(5).AlignCenter()
+                            .Text(type).FontSize(8).Bold().FontColor(typeColor);
+                        PdfCell(t, apps, bg);
+                    }
+
+                    AppRow("Dev Editors",       "Productive", "VS Code, Visual Studio, Rider, IntelliJ, PyCharm, WebStorm, CLion, Android Studio, Notepad++, Sublime Text, Atom, Eclipse, NetBeans", "#F0FDF4", "#16A34A");
+                    AppRow("Office Suite",       "Productive", "Excel, Word, PowerPoint, OneNote, Outlook", "#F0FDF4", "#16A34A");
+                    AppRow("Communication",      "Productive", "Microsoft Teams, Slack, Zoom", "#F0FDF4", "#16A34A");
+                    AppRow("Dev Tools",          "Productive", "Postman, Insomnia, DBeaver, SSMS, CMD, PowerShell, Windows Terminal, Git, GitHub Desktop, SourceTree", "#F0FDF4", "#16A34A");
+                    AppRow("Design & Creative",  "Productive", "Figma, Adobe apps, Blender", "#F0FDF4", "#16A34A");
+                    AppRow("Video Streaming",    "Distracting","YouTube, Netflix, Amazon Prime, Disney+, Twitch, VLC", "#FEF2F2", "#DC2626");
+                    AppRow("Social Media",       "Distracting","TikTok, Instagram, Facebook, Twitter/X, Reddit", "#FEF2F2", "#DC2626");
+                    AppRow("Gaming",             "Distracting","Steam, Epic Games, League of Legends, Valorant", "#FEF2F2", "#DC2626");
+                    AppRow("Music & Other",      "Neutral",    "Spotify, File Explorer, Calculator, Notepad, and all unrecognised applications", "#FFFBEB", "#D97706");
+                });
+
+                col.Item().PaddingTop(8).Text(
+                    "Administrators can create custom keyword rules in Settings → App Categories to override or extend the built-in defaults for their organisation.")
+                    .FontSize(8).FontColor("#64748B").Italic();
             });
         }
 

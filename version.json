@@ -1,5 +1,5 @@
 ﻿{
-    "version":  "1.1.8",
-    "downloadUrl":  "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.8/EAMAS-Setup-1.1.8.exe",
+    "version":  "1.1.9",
+    "downloadUrl":  "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.9/EAMAS-Setup-1.1.9.exe",
     "releaseNotes":  "Fix PDF export crash: QuestPDF single-child container violation — AlignCenter() was called after Text() had already claimed the container slot. Fixed by chaining AlignCenter() before Text() in PdfCell."
 }
