@@ -64,6 +64,32 @@ namespace EAMAS.Desktop.Converters
             => System.Windows.Data.Binding.DoNothing;
     }
 
+    /// <summary>Shows Collapsed when value is NOT null; Visible when null.</summary>
+    public class NullToVisibilityInverseConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => value == null ? Visibility.Visible : Visibility.Collapsed;
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => System.Windows.Data.Binding.DoNothing;
+    }
+
+    /// <summary>Returns a semi-transparent highlight Brush when bool is true.</summary>
+    public class BoolToHighlightBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var active = value is bool b && b;
+            return active
+                ? new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromArgb(20, 37, 99, 235))
+                : System.Windows.Media.Brushes.Transparent;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => System.Windows.Data.Binding.DoNothing;
+    }
+
     public class ScoreToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

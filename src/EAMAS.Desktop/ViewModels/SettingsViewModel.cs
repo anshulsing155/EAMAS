@@ -1,6 +1,6 @@
 using EAMAS.Core.Models;
 using EAMAS.Core.Services;
-using System.Windows;
+using Microsoft.Win32;
 
 namespace EAMAS.Desktop.ViewModels
 {
@@ -19,7 +19,7 @@ namespace EAMAS.Desktop.ViewModels
         private int _longIdleThreshold;
         private bool _alertOnDistracting;
         private int _distractingThreshold;
-        private string _screenshotsDir = string.Empty;
+        private bool _runOnStartup;
         private string _currentPassword = string.Empty;
         private string _newPassword = string.Empty;
         private string _confirmPassword = string.Empty;
@@ -36,17 +36,26 @@ namespace EAMAS.Desktop.ViewModels
         public int LongIdleThreshold { get => _longIdleThreshold; set => Set(ref _longIdleThreshold, value); }
         public bool AlertOnDistracting { get => _alertOnDistracting; set => Set(ref _alertOnDistracting, value); }
         public int DistractingThreshold { get => _distractingThreshold; set => Set(ref _distractingThreshold, value); }
-        public string ScreenshotsDir { get => _screenshotsDir; set => Set(ref _screenshotsDir, value); }
         public string StatusMessage { get => _statusMessage; set => Set(ref _statusMessage, value); }
         public bool IsSaving { get => _isSaving; set => Set(ref _isSaving, value); }
 
+        public bool RunOnStartup
+        {
+            get => _runOnStartup;
+            set
+            {
+                Set(ref _runOnStartup, value);
+                SetStartupRegistry(value);
+            }
+        }
+
         public bool IsAdmin => App.CurrentUser?.Role is UserRole.Admin or UserRole.SuperAdmin;
+        public bool IsEmployee => App.CurrentUser?.Role == UserRole.Employee;
         public string CurrentUserName => App.CurrentUser?.FullName ?? App.CurrentUser?.Username ?? "—";
         public string CurrentUserRole => App.CurrentUser?.Role.ToString() ?? "—";
         public string CurrentOrgName => App.CurrentOrganization?.Name ?? "System";
 
         public RelayCommand SaveSettingsCommand { get; }
-        public RelayCommand BrowseFolderCommand { get; }
         public RelayCommand ChangePasswordCommand { get; }
 
         public SettingsViewModel(SettingsService settingsService, UserService userService)
@@ -54,66 +63,47 @@ namespace EAMAS.Desktop.ViewModels
             _settingsService = settingsService;
             _userService = userService;
             SaveSettingsCommand = new RelayCommand(SaveSettings, () => IsAdmin);
-            BrowseFolderCommand = new RelayCommand(BrowseFolder, () => IsAdmin);
             ChangePasswordCommand = new RelayCommand(
                 () => ChangePassword(_currentPassword, _newPassword, _confirmPassword));
         }
 
         public void Initialize()
         {
-            var s = _settingsService.GetSettings(App.CurrentOrgId);
-            MonitoringEnabled = s.MonitoringEnabled;
-            ScreenshotsEnabled = s.ScreenshotsEnabled;
-            ScreenshotInterval = s.ScreenshotIntervalMinutes;
-            IdleThreshold = s.IdleThresholdSeconds / 60;
-            MaxScreenshotAge = s.MaxScreenshotAgeDays;
-            JpegQuality = s.JpegQuality;
-            AlertOnLongIdle = s.AlertOnLongIdle;
-            LongIdleThreshold = s.LongIdleThresholdMinutes;
-            AlertOnDistracting = s.AlertOnDistractingUsage;
-            DistractingThreshold = s.DistractingUsageThresholdMinutes;
-            ScreenshotsDir = string.IsNullOrEmpty(s.ScreenshotsDirectory)
-                ? SettingsService.GetDefaultScreenshotsDirectory(App.CurrentOrgId)
-                : s.ScreenshotsDirectory;
+            _runOnStartup = IsStartupEnabled();
+            OnPropertyChanged(nameof(RunOnStartup));
+
+            if (!IsEmployee)
+            {
+                var s = _settingsService.GetSettings(App.CurrentOrgId);
+                MonitoringEnabled = s.MonitoringEnabled;
+                ScreenshotsEnabled = s.ScreenshotsEnabled;
+                ScreenshotInterval = s.ScreenshotIntervalMinutes;
+                IdleThreshold = s.IdleThresholdSeconds / 60;
+                MaxScreenshotAge = s.MaxScreenshotAgeDays;
+                JpegQuality = s.JpegQuality;
+                AlertOnLongIdle = s.AlertOnLongIdle;
+                LongIdleThreshold = s.LongIdleThresholdMinutes;
+                AlertOnDistracting = s.AlertOnDistractingUsage;
+                DistractingThreshold = s.DistractingUsageThresholdMinutes;
+            }
         }
 
         private void SaveSettings()
         {
             IsSaving = true;
+            StatusMessage = string.Empty;
             try
             {
                 if (ScreenshotInterval < 1)
-                {
-                    StatusMessage = "Screenshot interval must be at least 1 minute.";
-                    return;
-                }
-
+                { StatusMessage = "Screenshot interval must be at least 1 minute."; return; }
                 if (IdleThreshold < 1)
-                {
-                    StatusMessage = "Idle threshold must be at least 1 minute.";
-                    return;
-                }
-
+                { StatusMessage = "Idle threshold must be at least 1 minute."; return; }
                 if (MaxScreenshotAge < 1)
-                {
-                    StatusMessage = "Max screenshot age must be at least 1 day.";
-                    return;
-                }
-
+                { StatusMessage = "Max screenshot age must be at least 1 day."; return; }
                 if (JpegQuality is < 1 or > 100)
-                {
-                    StatusMessage = "Screenshot quality must be between 1 and 100.";
-                    return;
-                }
-
+                { StatusMessage = "Screenshot quality must be between 1 and 100."; return; }
                 if (LongIdleThreshold < 1 || DistractingThreshold < 1)
-                {
-                    StatusMessage = "Alert thresholds must be at least 1 minute.";
-                    return;
-                }
-
-                if (string.IsNullOrWhiteSpace(ScreenshotsDir))
-                    ScreenshotsDir = SettingsService.GetDefaultScreenshotsDirectory(App.CurrentOrgId);
+                { StatusMessage = "Alert thresholds must be at least 1 minute."; return; }
 
                 var existing = _settingsService.GetSettings(App.CurrentOrgId);
                 existing.MonitoringEnabled = MonitoringEnabled;
@@ -126,7 +116,6 @@ namespace EAMAS.Desktop.ViewModels
                 existing.LongIdleThresholdMinutes = LongIdleThreshold;
                 existing.AlertOnDistractingUsage = AlertOnDistracting;
                 existing.DistractingUsageThresholdMinutes = DistractingThreshold;
-                existing.ScreenshotsDirectory = ScreenshotsDir;
 
                 _settingsService.SaveSettings(existing);
                 StatusMessage = "Settings saved successfully.";
@@ -141,17 +130,6 @@ namespace EAMAS.Desktop.ViewModels
             }
         }
 
-        private void BrowseFolder()
-        {
-            using var dialog = new System.Windows.Forms.FolderBrowserDialog
-            {
-                Description = "Select Screenshots Folder",
-                SelectedPath = ScreenshotsDir
-            };
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                ScreenshotsDir = dialog.SelectedPath;
-        }
-
         public void SetPasswordInputs(string current, string newPwd, string confirm)
         {
             _currentPassword = current;
@@ -162,24 +140,52 @@ namespace EAMAS.Desktop.ViewModels
         private void ChangePassword(string current, string newPwd, string confirm)
         {
             if (string.IsNullOrWhiteSpace(newPwd) || newPwd.Length < 6)
-            {
-                StatusMessage = "New password must be at least 6 characters.";
-                return;
-            }
+            { StatusMessage = "New password must be at least 6 characters."; return; }
             if (newPwd != confirm)
-            {
-                StatusMessage = "Passwords do not match.";
-                return;
-            }
+            { StatusMessage = "Passwords do not match."; return; }
 
             var currentUser = _userService.GetById(App.CurrentUser!.Id);
             if (currentUser == null || !UserService.VerifyPassword(current, currentUser.PasswordHash))
-            {
-                StatusMessage = "Current password is incorrect.";
-                return;
-            }
+            { StatusMessage = "Current password is incorrect."; return; }
+
             _userService.ChangePassword(App.CurrentUser.Id, newPwd);
             StatusMessage = "Password changed successfully.";
+        }
+
+        // ── Windows Startup Registry ──────────────────────────────────────────────
+
+        private static readonly string _startupKey =
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+
+        private static bool IsStartupEnabled()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(_startupKey);
+                return key?.GetValue("EAMAS") != null;
+            }
+            catch { return false; }
+        }
+
+        private static void SetStartupRegistry(bool enable)
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(_startupKey, writable: true);
+                if (key == null) return;
+
+                if (enable)
+                {
+                    var exePath = System.Diagnostics.Process.GetCurrentProcess()
+                                      .MainModule?.FileName ?? string.Empty;
+                    key.SetValue("EAMAS", $"\"{exePath}\"");
+                }
+                else
+                {
+                    key.DeleteValue("EAMAS", throwOnMissingValue: false);
+                }
+            }
+            catch { /* registry access can fail in restricted environments */ }
         }
     }
 }

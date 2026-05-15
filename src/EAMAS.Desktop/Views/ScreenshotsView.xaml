@@ -7,6 +7,7 @@
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
         <conv:NullToVisibilityConverter x:Key="NullVis"/>
+        <conv:NullToVisibilityInverseConverter x:Key="NullVisInverse"/>
         <local:SelectedBorderConverter x:Key="SelectedBorderConv"/>
     </UserControl.Resources>
 
@@ -37,7 +38,10 @@
                     </TextBlock>
                 </StackPanel>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+
+            <!-- Capture + Delete — hidden for Employee role -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Visibility="{Binding CanModify, Converter={StaticResource BoolVis}}">
                 <Button Content="&#xE722;  Capture Now" Style="{StaticResource PrimaryButton}"
                         Command="{Binding TakeScreenshotCommand}" Margin="0,0,8,0"/>
                 <Button Content="&#xE74D;  Delete" Style="{StaticResource DangerButton}"
@@ -63,12 +67,18 @@
                             Margin="4,0" Width="130" FontSize="13"/>
                 <Button Grid.Column="2" Content="&#x276F;" Style="{StaticResource SecondaryButton}"
                         Command="{Binding NextDayCommand}" Width="36" Padding="0" Margin="4,0,0,0"/>
+                <!-- User selector — Managers and above only -->
                 <ComboBox Grid.Column="4" Style="{StaticResource StyledComboBox}"
                           ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"
                           DisplayMemberPath="FullName" Width="180"
                           Visibility="{Binding IsManager, Converter={StaticResource BoolVis}}"/>
             </Grid>
         </Border>
+
+        <!-- Loading overlay -->
+        <ProgressBar Grid.Row="2" Grid.ColumnSpan="2" IsIndeterminate="True" Height="3"
+                     VerticalAlignment="Top"
+                     Visibility="{Binding IsLoading, Converter={StaticResource BoolVis}}"/>
 
         <!-- Screenshot Gallery -->
         <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource Card}" Padding="12" Margin="0,0,12,0">
@@ -95,13 +105,21 @@
                                                   Command="{Binding DataContext.SelectCommand,
                                                       RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                   CommandParameter="{Binding}"/>
-                                    <MouseBinding MouseAction="LeftDoubleClick"
-                                                  Command="{Binding DataContext.OpenScreenshotCommand,
-                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                 </Border.InputBindings>
                                 <Grid>
-                                    <Image Source="{Binding ThumbnailPath}" Stretch="UniformToFill"
+                                    <!-- Thumbnail loaded from in-DB bytes via BitmapImage -->
+                                    <Image Source="{Binding ThumbnailSource}" Stretch="UniformToFill"
                                            RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                    <!-- Placeholder when no thumbnail yet -->
+                                    <Border Background="#1E293B" CornerRadius="6"
+                                            Visibility="{Binding ThumbnailSource, Converter={StaticResource NullVisInverse}}">
+                                        <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="32" Foreground="#475569"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+
                                     <Border Background="#CC000000" CornerRadius="0,0,6,6"
                                             VerticalAlignment="Bottom" Padding="8,4">
                                         <StackPanel>
@@ -128,18 +146,29 @@
         <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource Card}"
                 Visibility="{Binding SelectedScreenshot, Converter={StaticResource NullVis}}">
             <StackPanel>
-                <TextBlock Text="Preview" Style="{StaticResource HeadingMedium}" FontSize="14" Margin="0,0,0,12"/>
-                <Border CornerRadius="6" ClipToBounds="True" Height="160">
-                    <Image Source="{Binding SelectedScreenshot.FilePath}" Stretch="Uniform"/>
+                <TextBlock Text="Preview" Style="{StaticResource HeadingMedium}"
+                           FontSize="14" Margin="0,0,0,12"/>
+
+                <!-- Loading preview indicator -->
+                <ProgressBar IsIndeterminate="True" Height="3" Margin="0,0,0,8"
+                             Visibility="{Binding IsLoadingPreview, Converter={StaticResource BoolVis}}"/>
+
+                <Border CornerRadius="6" ClipToBounds="True" Height="160" Background="#F1F5F9">
+                    <!-- Full-resolution image downloaded from GridFS -->
+                    <Image Source="{Binding SelectedImageSource}" Stretch="Uniform"/>
                 </Border>
+
                 <StackPanel Margin="0,12,0,0">
                     <TextBlock Text="TIME" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,2"/>
                     <TextBlock Text="{Binding SelectedScreenshot.TimeLabel}" Style="{StaticResource BodyText}"/>
-                    <TextBlock Text="APPLICATION" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,8,0,2"/>
+                    <TextBlock Text="APPLICATION" Style="{StaticResource SecondaryText}"
+                               FontSize="10" Margin="0,8,0,2"/>
                     <TextBlock Text="{Binding SelectedScreenshot.AppName}" Style="{StaticResource BodyText}"/>
-                    <TextBlock Text="FILE SIZE" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,8,0,2"/>
+                    <TextBlock Text="FILE SIZE" Style="{StaticResource SecondaryText}"
+                               FontSize="10" Margin="0,8,0,2"/>
                     <TextBlock Text="{Binding SelectedScreenshot.SizeLabel}" Style="{StaticResource BodyText}"/>
                 </StackPanel>
+
                 <Button Content="&#xE8A7;  Open Full Size" Style="{StaticResource SecondaryButton}"
                         Command="{Binding OpenScreenshotCommand}" Margin="0,16,0,0"/>
             </StackPanel>

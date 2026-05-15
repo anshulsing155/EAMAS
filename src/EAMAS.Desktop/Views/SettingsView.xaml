@@ -5,6 +5,7 @@
              Background="{StaticResource ContentBgBrush}">
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolVisInverse" Invert="True"/>
         <conv:NullOrEmptyToVisibilityConverter x:Key="MsgVis"/>
         <conv:InverseBoolConverter x:Key="InvBool"/>
     </UserControl.Resources>
@@ -14,7 +15,8 @@
             <!-- Header -->
             <StackPanel Margin="0,0,0,24">
                 <TextBlock Text="Settings" Style="{StaticResource HeadingLarge}"/>
-                <TextBlock Text="Configure monitoring, screenshots, and alerts" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
+                <TextBlock Text="Configure monitoring, screenshots, and alerts"
+                           Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
             </StackPanel>
 
             <!-- Status message -->
@@ -27,28 +29,50 @@
             <!-- Account Info -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="Account" Style="{StaticResource HeadingMedium}" FontSize="15" Margin="0,0,0,16"/>
+                    <TextBlock Text="Account" Style="{StaticResource HeadingMedium}"
+                               FontSize="15" Margin="0,0,0,16"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="NAME" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CurrentUserName}" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
+                            <TextBlock Text="NAME" Style="{StaticResource SecondaryText}"
+                                       FontSize="10" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CurrentUserName}" Style="{StaticResource BodyText}"
+                                       FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1">
-                            <TextBlock Text="ROLE" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CurrentUserRole}" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
+                            <TextBlock Text="ROLE" Style="{StaticResource SecondaryText}"
+                                       FontSize="10" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CurrentUserRole}" Style="{StaticResource BodyText}"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="ORGANISATION" Style="{StaticResource SecondaryText}"
+                                       FontSize="10" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CurrentOrgName}" Style="{StaticResource BodyText}"
+                                       FontWeight="SemiBold"/>
                         </StackPanel>
                     </Grid>
+
+                    <Separator Margin="0,16,0,16" Background="{StaticResource BorderBrush}"/>
+
+                    <!-- Run on Windows Startup -->
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox Content="Run EAMAS on Windows startup (monitoring continues in background)"
+                                  IsChecked="{Binding RunOnStartup}"
+                                  Style="{StaticResource StyledCheckBox}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- Change Password -->
+            <!-- Change Password (all roles) -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="Change Password" Style="{StaticResource HeadingMedium}" FontSize="15" Margin="0,0,0,16"/>
+                    <TextBlock Text="Change Password" Style="{StaticResource HeadingMedium}"
+                               FontSize="15" Margin="0,0,0,16"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -56,15 +80,18 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                            <TextBlock Text="CURRENT PASSWORD" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="CURRENT PASSWORD" Style="{StaticResource SecondaryText}"
+                                       FontSize="10" Margin="0,0,0,6"/>
                             <PasswordBox x:Name="TxtCurrentPwd" Style="{StaticResource PasswordField}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="4,0">
-                            <TextBlock Text="NEW PASSWORD" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="NEW PASSWORD" Style="{StaticResource SecondaryText}"
+                                       FontSize="10" Margin="0,0,0,6"/>
                             <PasswordBox x:Name="TxtNewPwd" Style="{StaticResource PasswordField}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2" Margin="8,0,0,0">
-                            <TextBlock Text="CONFIRM PASSWORD" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="CONFIRM PASSWORD" Style="{StaticResource SecondaryText}"
+                                       FontSize="10" Margin="0,0,0,6"/>
                             <PasswordBox x:Name="TxtConfirmPwd" Style="{StaticResource PasswordField}"/>
                         </StackPanel>
                     </Grid>
@@ -74,9 +101,10 @@
                 </StackPanel>
             </Border>
 
-            <!-- Monitoring Settings (Admin only) -->
+            <!-- Monitoring Settings (Admin/Manager only) -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16"
-                    IsEnabled="{Binding IsAdmin}">
+                    IsEnabled="{Binding IsAdmin}"
+                    Visibility="{Binding IsEmployee, Converter={StaticResource BoolVisInverse}}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <TextBlock Text="Monitoring" Style="{StaticResource HeadingMedium}" FontSize="15"/>
@@ -120,9 +148,11 @@
 
             <!-- Alerts Settings (Admin only) -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16"
-                    IsEnabled="{Binding IsAdmin}">
+                    IsEnabled="{Binding IsAdmin}"
+                    Visibility="{Binding IsEmployee, Converter={StaticResource BoolVisInverse}}">
                 <StackPanel>
-                    <TextBlock Text="Alerts" Style="{StaticResource HeadingMedium}" FontSize="15" Margin="0,0,0,16"/>
+                    <TextBlock Text="Alerts" Style="{StaticResource HeadingMedium}"
+                               FontSize="15" Margin="0,0,0,16"/>
 
                     <CheckBox Content="Alert when employee is idle too long"
                               IsChecked="{Binding AlertOnLongIdle}"
@@ -150,24 +180,18 @@
                 </StackPanel>
             </Border>
 
-            <!-- Storage Settings (Admin only) -->
-            <Border Style="{StaticResource Card}" Margin="0,0,0,16" IsEnabled="{Binding IsAdmin}">
+            <!-- Storage / Retention (Admin only) -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16"
+                    IsEnabled="{Binding IsAdmin}"
+                    Visibility="{Binding IsEmployee, Converter={StaticResource BoolVisInverse}}">
                 <StackPanel>
-                    <TextBlock Text="Storage" Style="{StaticResource HeadingMedium}" FontSize="15" Margin="0,0,0,16"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                            <TextBlock Text="SCREENSHOTS DIRECTORY" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,6"/>
-                            <TextBox Style="{StaticResource InputField}" Text="{Binding ScreenshotsDir}"/>
-                        </StackPanel>
-                        <Button Grid.Column="1" Content="Browse..." Style="{StaticResource SecondaryButton}"
-                                Command="{Binding BrowseFolderCommand}" VerticalAlignment="Bottom"/>
-                    </Grid>
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="Storage" Style="{StaticResource HeadingMedium}" FontSize="15"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource SecondaryText}" FontSize="12" Margin="0,0,0,12"
+                               TextWrapping="Wrap"
+                               Text="Screenshots are stored in MongoDB (GridFS). Set the maximum retention period below."/>
+                    <StackPanel Orientation="Horizontal">
                         <TextBlock Text="MAX SCREENSHOT AGE (days)" Style="{StaticResource SecondaryText}"
                                    FontSize="10" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBox Style="{StaticResource InputField}" Width="80"

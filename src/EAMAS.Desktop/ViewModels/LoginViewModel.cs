@@ -89,6 +89,35 @@ namespace EAMAS.Desktop.ViewModels
                     return;
                 }
 
+                // ── Single-session enforcement ───────────────────────
+                if (!string.IsNullOrEmpty(user.ActiveSessionToken))
+                {
+                    var when = user.SessionStartedAt.HasValue
+                        ? user.SessionStartedAt.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                        : "unknown time";
+                    var machine = user.SessionMachine ?? "another computer";
+
+                    var choice = System.Windows.MessageBox.Show(
+                        $"This account is already logged in on \"{machine}\" (since {when}).\n\n" +
+                        "Sign out the other session and continue here?",
+                        "Account Already Active",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (choice == System.Windows.MessageBoxResult.No)
+                    {
+                        ErrorMessage = "Login cancelled — another session is active.";
+                        return;
+                    }
+
+                    // Force-clear the stale/other session
+                    _userService.ForceCloseSession(user.Id);
+                }
+
+                // Open a new session token in MongoDB
+                var sessionToken = _userService.OpenSession(user.Id);
+                App.CurrentSessionToken = sessionToken;
+
                 App.CurrentUser = user;
                 App.CurrentOrganization = org; // null for SuperAdmin
 

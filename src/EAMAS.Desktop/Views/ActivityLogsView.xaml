@@ -6,6 +6,7 @@
              Background="{StaticResource ContentBgBrush}">
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolVisInverse" Invert="True"/>
         <local:CategoryBgColorConverter x:Key="CatBgColorConv"/>
         <local:CategoryTextColorConverter x:Key="CatTextColorConv"/>
     </UserControl.Resources>
@@ -43,13 +44,21 @@
                 <Button Grid.Column="2" Content="&#x276F;" Style="{StaticResource SecondaryButton}"
                         Command="{Binding NextDayCommand}" Width="36" Padding="0" Margin="0,0,8,0"/>
 
-                <!-- User selector (admin/manager) -->
+                <!-- Org selector (SuperAdmin only) -->
+                <ComboBox Grid.Column="3" Style="{StaticResource StyledComboBox}"
+                          ItemsSource="{Binding Organizations}"
+                          SelectedItem="{Binding SelectedOrg}"
+                          DisplayMemberPath="Name"
+                          Width="160" HorizontalAlignment="Left" Margin="0,0,8,0"
+                          Visibility="{Binding ShowOrgSelector, Converter={StaticResource BoolVis}}"/>
+
+                <!-- User selector (manager and above) -->
                 <ComboBox Grid.Column="3" Style="{StaticResource StyledComboBox}"
                           ItemsSource="{Binding Users}"
                           SelectedItem="{Binding SelectedUser}"
                           DisplayMemberPath="FullName"
                           Width="160" HorizontalAlignment="Left" Margin="0,0,8,0"
-                          Visibility="{Binding IsManager, Converter={StaticResource BoolVis}}"/>
+                          Visibility="{Binding ShowUserSelector, Converter={StaticResource BoolVis}}"/>
 
                 <!-- Filter -->
                 <TextBox Grid.Column="4" Style="{StaticResource InputField}"

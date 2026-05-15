@@ -30,5 +30,12 @@ namespace EAMAS.Core.Models
         public bool ConsentGiven { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastLogin { get; set; }
+
+        // ── Active-session tracking ──────────────────────────────────
+        /// <summary>Non-null while this user is actively logged in somewhere.</summary>
+        public string? ActiveSessionToken { get; set; }
+        public DateTime? SessionStartedAt { get; set; }
+        /// <summary>Hostname of the machine that holds the active session.</summary>
+        public string? SessionMachine { get; set; }
     }
 }

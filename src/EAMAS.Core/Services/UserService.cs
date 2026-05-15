@@ -97,6 +97,7 @@ namespace EAMAS.Core.Services
         public void UpdateUser(User updated)
         {
             var update = Builders<User>.Update
+                .Set(u => u.OrganizationId, updated.OrganizationId)
                 .Set(u => u.FullName, updated.FullName)
                 .Set(u => u.Email, updated.Email)
                 .Set(u => u.Department, updated.Department)
@@ -130,6 +131,51 @@ namespace EAMAS.Core.Services
             return _db.Users.CountDocuments(u =>
                 u.OrganizationId == organizationId &&
                 u.Username == username) > 0;
+        }
+
+        // ── Active-session management ────────────────────────────────────────────
+
+        /// <summary>
+        /// Writes a session token to the user document. Returns the new token.
+        /// </summary>
+        public string OpenSession(string userId)
+        {
+            var token = Guid.NewGuid().ToString("N");
+            var update = Builders<User>.Update
+                .Set(u => u.ActiveSessionToken, token)
+                .Set(u => u.SessionStartedAt, DateTime.UtcNow)
+                .Set(u => u.SessionMachine, Environment.MachineName);
+            _db.Users.UpdateOne(u => u.Id == userId, update);
+            return token;
+        }
+
+        /// <summary>
+        /// Clears the session token so the account is available for login elsewhere.
+        /// Only clears if the supplied token matches (prevents a stale close from
+        /// evicting a newer session).
+        /// </summary>
+        public void CloseSession(string userId, string token)
+        {
+            var filter = Builders<User>.Filter.And(
+                Builders<User>.Filter.Eq(u => u.Id, userId),
+                Builders<User>.Filter.Eq(u => u.ActiveSessionToken, token));
+
+            var update = Builders<User>.Update
+                .Set(u => u.ActiveSessionToken, (string?)null)
+                .Set(u => u.SessionStartedAt, (DateTime?)null)
+                .Set(u => u.SessionMachine, (string?)null);
+
+            _db.Users.UpdateOne(filter, update);
+        }
+
+        /// <summary>Force-clears any active session regardless of token (admin override).</summary>
+        public void ForceCloseSession(string userId)
+        {
+            var update = Builders<User>.Update
+                .Set(u => u.ActiveSessionToken, (string?)null)
+                .Set(u => u.SessionStartedAt, (DateTime?)null)
+                .Set(u => u.SessionMachine, (string?)null);
+            _db.Users.UpdateOne(u => u.Id == userId, update);
         }
     }
 }

@@ -45,8 +45,10 @@ namespace EAMAS.Desktop.ViewModels
         public bool IsNewUser { get => _isNewUser; set => Set(ref _isNewUser, value); }
         public string StatusMessage { get => _statusMessage; set => Set(ref _statusMessage, value); }
 
-        /// <summary>Roles that an org admin/manager can assign (excludes SuperAdmin).</summary>
-        public List<string> RoleOptions { get; } = new() { "Admin", "Manager", "Employee" };
+        public bool IsAdmin => App.CurrentUser?.Role == UserRole.Admin;
+
+        /// <summary>Roles an org Admin can assign; excludes Admin to prevent lateral privilege escalation.</summary>
+        public List<string> RoleOptions { get; } = new() { "Manager", "Employee" };
 
         public RelayCommand AddNewCommand { get; }
         public RelayCommand SaveCommand { get; }
@@ -74,6 +76,7 @@ namespace EAMAS.Desktop.ViewModels
 
         private void AddNew()
         {
+            if (!IsAdmin) return;
             IsNewUser = true;
             _editId = string.Empty;
             EditFullName = string.Empty;
@@ -88,6 +91,7 @@ namespace EAMAS.Desktop.ViewModels
         private void OnSelectedChanged()
         {
             if (SelectedEmployee == null) return;
+            if (!IsAdmin) return; // Managers see the list read-only; no edit panel
             IsNewUser = false;
             _editId = SelectedEmployee.Id;
             EditFullName = SelectedEmployee.FullName;

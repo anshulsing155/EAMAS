@@ -2,6 +2,7 @@ using EAMAS.Core.Models;
 using EAMAS.Core.Services;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 
 namespace EAMAS.Desktop.Services
 {
@@ -27,7 +28,10 @@ namespace EAMAS.Desktop.Services
         private DateTime _sessionStart = DateTime.MinValue;
         private bool _wasIdle = false;
 
+        /// <summary>Fired when the foreground application changes.</summary>
         public event Action<string, string>? ActivityChanged;
+
+        public bool IsRunning => _isRunning;
 
         public MonitoringBackgroundService(
             ActivityMonitorService activityService,
@@ -41,6 +45,7 @@ namespace EAMAS.Desktop.Services
             _settingsService = settingsService;
         }
 
+        /// <summary>Start monitoring for the given user. Not called for SuperAdmin.</summary>
         public void Start(string orgId, string userId)
         {
             if (_isRunning) return;
@@ -61,14 +66,15 @@ namespace EAMAS.Desktop.Services
             FlushCurrentSession(DateTime.UtcNow);
         }
 
+        /// <summary>Trigger an immediate manual screenshot capture.</summary>
         public void TriggerScreenshot()
         {
             var settings = _settingsService.GetSettings(_currentOrgId);
-            if (!settings.MonitoringEnabled || !settings.ScreenshotsEnabled)
-                return;
-
-            CaptureAndSave(settings, isManual: true);
+            if (!settings.MonitoringEnabled || !settings.ScreenshotsEnabled) return;
+            Task.Run(() => CaptureAndSaveAsync(settings, isManual: true));
         }
+
+        // ── Activity Loop ────────────────────────────────────────────────────────
 
         private async Task ActivityLoop(CancellationToken ct)
         {
@@ -83,14 +89,8 @@ namespace EAMAS.Desktop.Services
                     var pollMs = Math.Max(1, settings.ActivityPollIntervalSeconds) * 1000;
                     await Task.Delay(pollMs, ct).ConfigureAwait(false);
                 }
-                catch (TaskCanceledException)
-                {
-                    return;
-                }
-                catch
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
-                }
+                catch (TaskCanceledException) { return; }
+                catch { await Task.Delay(2000, ct).ConfigureAwait(false); }
             }
         }
 
@@ -135,8 +135,7 @@ namespace EAMAS.Desktop.Services
                 return;
             }
 
-            if (hWnd == _lastWindow && process == _lastProcess)
-                return;
+            if (hWnd == _lastWindow && process == _lastProcess) return;
 
             if (_sessionStart != DateTime.MinValue)
                 FlushCurrentSession(now);
@@ -175,6 +174,8 @@ namespace EAMAS.Desktop.Services
             _activityService.RecordActivity(log);
         }
 
+        // ── Screenshot Loop ──────────────────────────────────────────────────────
+
         private async Task ScreenshotLoop(CancellationToken ct)
         {
             while (!ct.IsCancellationRequested)
@@ -183,39 +184,31 @@ namespace EAMAS.Desktop.Services
                 var intervalMinutes = Math.Max(1, settings.ScreenshotIntervalMinutes);
 
                 await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct).ConfigureAwait(false);
-
                 if (ct.IsCancellationRequested) break;
 
                 try
                 {
                     settings = _settingsService.GetSettings(_currentOrgId);
                     if (settings.MonitoringEnabled && settings.ScreenshotsEnabled)
-                        CaptureAndSave(settings, isManual: false);
+                        await CaptureAndSaveAsync(settings, isManual: false).ConfigureAwait(false);
                 }
-                catch (TaskCanceledException)
-                {
-                    return;
-                }
-                catch { /* swallow */ }
+                catch (TaskCanceledException) { return; }
+                catch { /* swallow individual screenshot failures */ }
             }
         }
 
-        private void CaptureAndSave(SystemSettings settings, bool isManual)
+        /// <summary>
+        /// Captures the primary screen entirely in memory, uploads to MongoDB GridFS,
+        /// and saves the record. No files are written to local disk.
+        /// </summary>
+        private async Task CaptureAndSaveAsync(SystemSettings settings, bool isManual)
         {
-            var directory = string.IsNullOrEmpty(settings.ScreenshotsDirectory)
-                ? SettingsService.GetDefaultScreenshotsDirectory(_currentOrgId)
-                : settings.ScreenshotsDirectory;
-            System.IO.Directory.CreateDirectory(directory);
-
             var hWnd = WindowsApiService.GetForegroundWindow();
             var pid = WindowsApiService.GetProcessId(hWnd);
-            var currentApp = WindowsApiService.GetProcessName(pid);
-
-            var fileName = $"{DateTime.Now:yyyyMMdd_HHmmss}.jpg";
-            var filePath = System.IO.Path.Combine(directory, fileName);
-            var thumbPath = System.IO.Path.Combine(directory, $"thumb_{fileName}");
+            var currentApp = FormatAppName(WindowsApiService.GetProcessName(pid));
 
             var bounds = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
+
             using var bmp = new Bitmap(bounds.Width, bounds.Height);
             using var g = Graphics.FromImage(bmp);
             g.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
@@ -225,27 +218,34 @@ namespace EAMAS.Desktop.Services
             encoderParams.Param[0] = new EncoderParameter(
                 Encoder.Quality, (long)settings.JpegQuality);
 
-            bmp.Save(filePath, jpegEncoder, encoderParams);
-            var fileInfo = new System.IO.FileInfo(filePath);
+            // Full screenshot → MemoryStream
+            using var fullMs = new MemoryStream();
+            bmp.Save(fullMs, jpegEncoder, encoderParams);
+            var fullBytes = fullMs.ToArray();
 
-            using var thumb = new Bitmap(240, 135);
-            using var tg = Graphics.FromImage(thumb);
+            // Thumbnail 240×135 → MemoryStream
+            using var thumbBmp = new Bitmap(240, 135);
+            using var tg = Graphics.FromImage(thumbBmp);
             tg.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             tg.DrawImage(bmp, 0, 0, 240, 135);
-            thumb.Save(thumbPath, jpegEncoder, encoderParams);
+            using var thumbMs = new MemoryStream();
+            thumbBmp.Save(thumbMs, jpegEncoder, encoderParams);
+            var thumbBytes = thumbMs.ToArray();
 
-            _screenshotService.SaveRecord(new ScreenshotRecord
+            var record = new ScreenshotRecord
             {
                 OrganizationId = _currentOrgId,
                 UserId = _currentUserId,
                 TakenAt = DateTime.UtcNow,
-                FilePath = filePath,
-                ThumbnailPath = thumbPath,
-                ApplicationName = FormatAppName(currentApp),
-                FileSizeBytes = fileInfo.Length,
+                ApplicationName = currentApp,
                 IsManual = isManual
-            });
+            };
+
+            await _screenshotService.SaveScreenshotAsync(fullBytes, thumbBytes, record)
+                .ConfigureAwait(false);
         }
+
+        // ── Helpers ──────────────────────────────────────────────────────────────
 
         private TimeSpan GetTodayDistractingTime()
         {

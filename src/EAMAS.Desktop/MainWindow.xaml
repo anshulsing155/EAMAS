@@ -6,130 +6,240 @@
         Title="EAMAS - Employee Activity Monitoring &amp; Analytics"
         Height="760" Width="1200" MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource ContentBgBrush}">
+        Background="{StaticResource ContentBgBrush}"
+        TextOptions.TextFormattingMode="Display">
+
     <Window.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
-        <conv:IntToVisibilityConverter x:Key="IntVis"/>
-        <conv:InitialsConverter x:Key="InitialsConverter"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolVisInverse" Invert="True"/>
+        <conv:IntToVisibilityConverter  x:Key="IntVis"/>
+        <conv:InitialsConverter         x:Key="InitialsConverter"/>
+        <conv:InverseBoolConverter      x:Key="InvBool"/>
     </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
+            <!-- Width="Auto" lets SidebarBorder drive the column size so we can animate its Width -->
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{StaticResource SidebarBgBrush}">
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  SIDEBAR                                                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <Border x:Name="SidebarBorder"
+                Grid.Column="0"
+                Width="220"
+                ClipToBounds="True"
+                Background="{StaticResource SidebarBgBrush}">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Margin="20,24,20,8">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <Border Width="34" Height="34" CornerRadius="8"
-                                Background="{StaticResource PrimaryBrush}">
-                            <TextBlock Text="E" FontSize="18" FontWeight="Bold"
-                                       Foreground="White" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="EAMAS" FontSize="15" FontWeight="Bold"
-                                       Foreground="White"/>
-                            <TextBlock Text="Activity Monitor" FontSize="10"
-                                       Foreground="#64748B"/>
-                        </StackPanel>
+
+                <!-- ── Logo + Collapse toggle ─────────────────────── -->
+                <Grid DockPanel.Dock="Top" Margin="16,20,16,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- "E" icon always visible -->
+                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="8"
+                            Background="{StaticResource PrimaryBrush}"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="E" FontSize="18" FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Brand text — hidden when sidebar is collapsed -->
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}">
+                        <TextBlock Text="EAMAS" FontSize="15" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="{Binding OrgDisplayName}" FontSize="10"
+                                   Foreground="#64748B" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
-                    <Separator Background="#1E293B" Margin="0,16,0,8"/>
-                </StackPanel>
 
-                <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
-                    <Separator Background="#1E293B" Margin="0,0,0,12"/>
+                    <!-- Hamburger toggle -->
+                    <Button Grid.Column="2" x:Name="BtnToggleSidebar"
+                            Click="BtnToggleSidebar_Click"
+                            Width="28" Height="28" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Collapse / expand sidebar"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="14" Foreground="#64748B"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </Grid>
 
-                    <Border Background="#1E293B" CornerRadius="6" Padding="10,8" Margin="0,0,0,10">
+                <Separator DockPanel.Dock="Top" Background="#1E293B" Margin="16,14,16,6"/>
+
+                <!-- ── Bottom: status + user info + logout ────────── -->
+                <StackPanel DockPanel.Dock="Bottom" Margin="12,0,12,14">
+                    <Separator Background="#1E293B" Margin="0,0,0,10"/>
+
+                    <!-- NOW TRACKING badge -->
+                    <Border Background="#1E293B" CornerRadius="6" Padding="10,8" Margin="0,0,0,8"
+                            Visibility="{Binding IsMonitoring, Converter={StaticResource BoolVis}}">
                         <StackPanel>
                             <TextBlock Text="NOW TRACKING" FontSize="9" FontWeight="SemiBold"
-                                       Foreground="#475569" Margin="0,0,0,3"/>
+                                       Foreground="#475569" Margin="0,0,0,3"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                             <TextBlock Text="{Binding CurrentActivity}" FontSize="11"
-                                       Foreground="#94A3B8" TextTrimming="CharacterEllipsis"/>
+                                       Foreground="#94A3B8" TextTrimming="CharacterEllipsis"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                            <!-- Icon-only placeholder when collapsed -->
+                            <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                       Foreground="#94A3B8" HorizontalAlignment="Center"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVisInverse}}"
+                                       ToolTip="{Binding CurrentActivity}"/>
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <!-- SUPER ADMIN badge -->
+                    <Border Background="#1E293B" CornerRadius="6" Padding="10,8" Margin="0,0,0,8"
+                            Visibility="{Binding IsSuperAdmin, Converter={StaticResource BoolVis}}">
+                        <StackPanel>
+                            <TextBlock Text="SUPER ADMIN MODE" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="#F59E0B" Margin="0,0,0,3"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                            <TextBlock Text="Not being monitored" FontSize="11" Foreground="#94A3B8"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                            <TextBlock Text="&#xE734;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                       Foreground="#F59E0B" HorizontalAlignment="Center"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVisInverse}}"
+                                       ToolTip="Super Admin — not monitored"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- User avatar + info -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <Border Width="32" Height="32" CornerRadius="16"
-                                Background="{StaticResource PrimaryBrush}">
+                                Background="{StaticResource PrimaryBrush}"
+                                ToolTip="{Binding CurrentUser.FullName}">
                             <TextBlock FontSize="13" FontWeight="Bold" Foreground="White"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Text="{Binding CurrentUser.FullName,
                                            Converter={StaticResource InitialsConverter}}"/>
                         </Border>
-                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}">
                             <TextBlock Text="{Binding CurrentUser.FullName}"
                                        FontSize="12" FontWeight="SemiBold" Foreground="White"
-                                       MaxWidth="130" TextTrimming="CharacterEllipsis"/>
+                                       MaxWidth="120" TextTrimming="CharacterEllipsis"/>
                             <TextBlock Text="{Binding CurrentUser.Role}"
                                        FontSize="10" Foreground="#64748B"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <Button Content="Logout" Style="{StaticResource NavButton}"
+                    <!-- Logout -->
+                    <Button x:Name="BtnLogout" Style="{StaticResource NavButton}"
                             Command="{Binding LogoutCommand}"
-                            Foreground="#EF4444" HorizontalContentAlignment="Center"/>
+                            Foreground="#EF4444"
+                            HorizontalContentAlignment="{Binding SidebarExpanded,
+                                Converter={StaticResource BoolVis},
+                                ConverterParameter=center}"
+                            ToolTip="Logout">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="14" Width="20" VerticalAlignment="Center"/>
+                            <TextBlock Text="Logout" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
-                <StackPanel Margin="12,0">
+                <!-- ── Navigation items ───────────────────────────── -->
+                <StackPanel Margin="10,0">
+
                     <Button x:Name="BtnDashboard"
                             Command="{Binding NavigateDashboardCommand}"
-                            Style="{StaticResource NavButton}" Margin="0,2">
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            ToolTip="Dashboard">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="22"/>
-                            <TextBlock Text="Dashboard" Margin="8,0,0,0"/>
+                            <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Dashboard" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Button>
 
                     <Button x:Name="BtnActivity"
                             Command="{Binding NavigateActivityCommand}"
-                            Style="{StaticResource NavButton}" Margin="0,2">
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            ToolTip="Activity Logs">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="22"/>
-                            <TextBlock Text="Activity Logs" Margin="8,0,0,0"/>
+                            <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Activity Logs" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Button>
 
                     <Button x:Name="BtnScreenshots"
                             Command="{Binding NavigateScreenshotsCommand}"
-                            Style="{StaticResource NavButton}" Margin="0,2">
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            ToolTip="Screenshots">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="22"/>
-                            <TextBlock Text="Screenshots" Margin="8,0,0,0"/>
+                            <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Screenshots" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Button>
 
                     <Button x:Name="BtnReports"
                             Command="{Binding NavigateReportsCommand}"
-                            Style="{StaticResource NavButton}" Margin="0,2">
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            ToolTip="Reports">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="22"/>
-                            <TextBlock Text="Reports" Margin="8,0,0,0"/>
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Reports" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Button>
 
+                    <!-- Employees — org Admin only (SuperAdmin uses Organisations page) -->
                     <Button x:Name="BtnEmployees"
                             Command="{Binding NavigateEmployeesCommand}"
                             Style="{StaticResource NavButton}" Margin="0,2"
-                            Visibility="{Binding IsManager, Converter={StaticResource BoolVis}}">
+                            Visibility="{Binding ShowEmployeesNav, Converter={StaticResource BoolVis}}"
+                            ToolTip="Employees">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="22"/>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Employees" Margin="8,0,0,0"/>
-                            </StackPanel>
+                            <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Employees" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="BtnAlerts"
+                    <!-- Organisations — SuperAdmin only -->
+                    <Button x:Name="BtnOrganizations"
+                            Command="{Binding NavigateOrganizationsCommand}"
                             Style="{StaticResource NavButton}" Margin="0,2"
-                            IsEnabled="False">
+                            Visibility="{Binding IsSuperAdmin, Converter={StaticResource BoolVis}}"
+                            ToolTip="Organisations">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xEA8F;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="22"/>
-                            <TextBlock Text="Alerts" Margin="8,0,0,0"/>
+                            <TextBlock Text="&#xE731;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Organisations" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Alerts — all roles -->
+                    <Button x:Name="BtnAlerts"
+                            Command="{Binding NavigateAlertsCommand}"
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            ToolTip="Alerts">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xEA8F;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Alerts" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                             <Border Background="#EF4444" CornerRadius="10" Padding="6,1"
-                                    Margin="8,0,0,0"
+                                    Margin="6,0,0,0"
                                     Visibility="{Binding UnreadAlerts, Converter={StaticResource IntVis}}">
                                 <TextBlock Text="{Binding UnreadAlerts}" FontSize="10"
                                            Foreground="White" FontWeight="Bold"/>
@@ -139,16 +249,23 @@
 
                     <Button x:Name="BtnSettings"
                             Command="{Binding NavigateSettingsCommand}"
-                            Style="{StaticResource NavButton}" Margin="0,2">
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            ToolTip="Settings">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="22"/>
-                            <TextBlock Text="Settings" Margin="8,0,0,0"/>
+                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Settings" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
                         </StackPanel>
                     </Button>
+
                 </StackPanel>
             </DockPanel>
         </Border>
 
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!--  MAIN CONTENT AREA                                         -->
+        <!-- ══════════════════════════════════════════════════════════ -->
         <ContentControl x:Name="MainContent" Grid.Column="1"
                         Background="{StaticResource ContentBgBrush}"/>
     </Grid>

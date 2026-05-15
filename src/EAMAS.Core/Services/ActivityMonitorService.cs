@@ -36,9 +36,8 @@ namespace EAMAS.Core.Services
             var existing = _db.AppUsages.Find(filter).FirstOrDefault();
             if (existing != null)
             {
-                var update = Builders<AppUsage>.Update
-                    .Inc(a => a.DurationTicks, log.Duration.Ticks);
-                _db.AppUsages.UpdateOne(filter, update);
+                _db.AppUsages.UpdateOne(filter,
+                    Builders<AppUsage>.Update.Inc(a => a.DurationTicks, log.Duration.Ticks));
             }
             else
             {
@@ -55,14 +54,22 @@ namespace EAMAS.Core.Services
             }
         }
 
-        public List<ActivityLog> GetActivity(string orgId, string userId,
+        /// <summary>Get activity logs for a specific user. Pass orgId=null for all orgs (SuperAdmin).</summary>
+        public List<ActivityLog> GetActivity(string? orgId, string? userId,
             DateTime from, DateTime to, int limit = 500)
         {
+            var fb = Builders<ActivityLog>.Filter;
+            var filter = fb.And(
+                fb.Gte(x => x.StartTime, from),
+                fb.Lt(x => x.StartTime, to));
+
+            if (!string.IsNullOrEmpty(orgId))
+                filter &= fb.Eq(x => x.OrganizationId, orgId);
+            if (!string.IsNullOrEmpty(userId))
+                filter &= fb.Eq(x => x.UserId, userId);
+
             return _db.ActivityLogs
-                .Find(x => x.OrganizationId == orgId &&
-                           x.UserId == userId &&
-                           x.StartTime >= from &&
-                           x.StartTime < to)
+                .Find(filter)
                 .SortByDescending(x => x.StartTime)
                 .Limit(limit)
                 .ToList();
@@ -74,14 +81,20 @@ namespace EAMAS.Core.Services
             return GetActivity(orgId, userId, today, today.AddDays(1));
         }
 
-        public List<AppUsage> GetAppUsage(string orgId, string userId, DateTime from, DateTime to)
+        /// <summary>Get app usage aggregates. Pass orgId=null for all orgs (SuperAdmin).</summary>
+        public List<AppUsage> GetAppUsage(string? orgId, string? userId, DateTime from, DateTime to)
         {
-            return _db.AppUsages
-                .Find(x => x.OrganizationId == orgId &&
-                           x.UserId == userId &&
-                           x.RecordedAt >= from &&
-                           x.RecordedAt < to)
-                .ToList();
+            var fb = Builders<AppUsage>.Filter;
+            var filter = fb.And(
+                fb.Gte(x => x.RecordedAt, from),
+                fb.Lt(x => x.RecordedAt, to));
+
+            if (!string.IsNullOrEmpty(orgId))
+                filter &= fb.Eq(x => x.OrganizationId, orgId);
+            if (!string.IsNullOrEmpty(userId))
+                filter &= fb.Eq(x => x.UserId, userId);
+
+            return _db.AppUsages.Find(filter).ToList();
         }
 
         public Dictionary<int, TimeSpan> GetHourlyActivity(string orgId, string userId, DateTime date)
@@ -97,6 +110,29 @@ namespace EAMAS.Core.Services
                            x.StartTime < end)
                 .ToList();
 
+            var result = new Dictionary<int, TimeSpan>();
+            for (int h = 0; h < 24; h++) result[h] = TimeSpan.Zero;
+            foreach (var log in logs)
+                result[log.StartTime.Hour] += log.Duration;
+            return result;
+        }
+
+        /// <summary>Hourly activity across all users in an org. Pass orgId=null for all orgs (SuperAdmin).</summary>
+        public Dictionary<int, TimeSpan> GetHourlyActivityAllUsers(string? orgId, DateTime date)
+        {
+            var start = date.Date;
+            var end = start.AddDays(1);
+
+            var fb = Builders<ActivityLog>.Filter;
+            var filter = fb.And(
+                fb.Gte(x => x.StartTime, start),
+                fb.Lt(x => x.StartTime, end),
+                fb.Eq(x => x.IsIdle, false));
+
+            if (!string.IsNullOrEmpty(orgId))
+                filter &= fb.Eq(x => x.OrganizationId, orgId);
+
+            var logs = _db.ActivityLogs.Find(filter).ToList();
             var result = new Dictionary<int, TimeSpan>();
             for (int h = 0; h < 24; h++) result[h] = TimeSpan.Zero;
             foreach (var log in logs)
@@ -120,6 +156,27 @@ namespace EAMAS.Core.Services
                 .ToDictionary(
                     g => g.Key,
                     g => TimeSpan.FromTicks(g.Sum(x => x.Duration.Ticks)));
+        }
+
+        /// <summary>Count distinct users who had at least one activity log on the given date.</summary>
+        public int GetActiveUserCount(string? orgId, DateTime date)
+        {
+            var start = date.Date;
+            var end = start.AddDays(1);
+
+            var fb = Builders<ActivityLog>.Filter;
+            var filter = fb.And(
+                fb.Gte(x => x.StartTime, start),
+                fb.Lt(x => x.StartTime, end),
+                fb.Eq(x => x.IsIdle, false));
+
+            if (!string.IsNullOrEmpty(orgId))
+                filter &= fb.Eq(x => x.OrganizationId, orgId);
+
+            return _db.ActivityLogs
+                .Distinct(x => x.UserId, filter)
+                .ToList()
+                .Count;
         }
     }
 }

@@ -1,4 +1,6 @@
-using System.Windows.Controls;
+using System.Windows;
+using System.Windows.Media.Animation;
+using SWC = System.Windows.Controls;
 
 namespace EAMAS.Desktop.Services
 {
@@ -9,12 +11,14 @@ namespace EAMAS.Desktop.Services
         Screenshots,
         Reports,
         Employees,
+        Alerts,
+        Organizations,
         Settings
     }
 
     public class NavigationService
     {
-        private ContentControl? _frame;
+        private SWC.ContentControl? _frame;
         private readonly IServiceProvider _services;
 
         public event Action<AppPage>? PageChanged;
@@ -25,7 +29,7 @@ namespace EAMAS.Desktop.Services
             _services = services;
         }
 
-        public void Attach(ContentControl frame)
+        public void Attach(SWC.ContentControl frame)
         {
             _frame = frame;
         }
@@ -34,21 +38,54 @@ namespace EAMAS.Desktop.Services
         {
             if (_frame == null) return;
 
-            var view = page switch
-            {
-                AppPage.Dashboard => (System.Windows.Controls.UserControl)GetService<Views.DashboardView>(),
-                AppPage.ActivityLogs => (System.Windows.Controls.UserControl)GetService<Views.ActivityLogsView>(),
-                AppPage.Screenshots => (System.Windows.Controls.UserControl)GetService<Views.ScreenshotsView>(),
-                AppPage.Reports => (System.Windows.Controls.UserControl)GetService<Views.ReportsView>(),
-                AppPage.Employees => (System.Windows.Controls.UserControl)GetService<Views.EmployeesView>(),
-                AppPage.Settings => (System.Windows.Controls.UserControl)GetService<Views.SettingsView>(),
-                _ => throw new ArgumentOutOfRangeException()
-            };
+            var view = GetView(page);
 
-            _frame.Content = view;
+            if (_frame.Content == null)
+            {
+                // First navigation — no old content to fade out
+                _frame.Content = view;
+                _frame.BeginAnimation(UIElement.OpacityProperty,
+                    MakeFadeIn());
+            }
+            else
+            {
+                var fadeOut = new DoubleAnimation(1d, 0d,
+                    new Duration(TimeSpan.FromMilliseconds(120)))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+                };
+
+                fadeOut.Completed += (_, _) =>
+                {
+                    _frame.Content = view;
+                    _frame.BeginAnimation(UIElement.OpacityProperty, MakeFadeIn());
+                };
+
+                _frame.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+            }
+
             CurrentPage = page;
             PageChanged?.Invoke(page);
         }
+
+        private static DoubleAnimation MakeFadeIn() =>
+            new DoubleAnimation(0d, 1d, new Duration(TimeSpan.FromMilliseconds(220)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+        private SWC.UserControl GetView(AppPage page) => page switch
+        {
+            AppPage.Dashboard     => (SWC.UserControl)GetService<Views.DashboardView>(),
+            AppPage.ActivityLogs  => (SWC.UserControl)GetService<Views.ActivityLogsView>(),
+            AppPage.Screenshots   => (SWC.UserControl)GetService<Views.ScreenshotsView>(),
+            AppPage.Reports       => (SWC.UserControl)GetService<Views.ReportsView>(),
+            AppPage.Employees     => (SWC.UserControl)GetService<Views.EmployeesView>(),
+            AppPage.Alerts        => (SWC.UserControl)GetService<Views.AlertsView>(),
+            AppPage.Organizations => (SWC.UserControl)GetService<Views.OrganizationsView>(),
+            AppPage.Settings      => (SWC.UserControl)GetService<Views.SettingsView>(),
+            _ => throw new ArgumentOutOfRangeException(nameof(page))
+        };
 
         private T GetService<T>() where T : notnull =>
             (T)_services.GetService(typeof(T))!;

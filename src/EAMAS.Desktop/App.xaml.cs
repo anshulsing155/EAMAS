@@ -15,25 +15,48 @@ namespace EAMAS.Desktop
     {
         public static IServiceProvider Services { get; private set; } = null!;
 
-        /// <summary>The currently authenticated user for this session.</summary>
         public static User? CurrentUser { get; set; }
 
-        /// <summary>
-        /// The organisation the current user belongs to.
-        /// Null only for SuperAdmin (OrganizationId = "SYSTEM").
-        /// </summary>
+        /// <summary>Organisation the current user belongs to. Null for SuperAdmin.</summary>
         public static Organization? CurrentOrganization { get; set; }
 
-        /// <summary>
-        /// Convenience accessor: returns the current effective OrganizationId.
-        /// SuperAdmin uses "SYSTEM".
-        /// </summary>
         public static string CurrentOrgId =>
             CurrentUser?.OrganizationId ?? "SYSTEM";
+
+        /// <summary>Set to true before Shutdown() so MainWindow doesn't cancel the close event.</summary>
+        public static bool IsExiting { get; private set; }
+
+        /// <summary>Token written to MongoDB when a user logs in; cleared on logout/exit.</summary>
+        public static string? CurrentSessionToken { get; set; }
+
+        // Single-instance enforcement
+        private static System.Threading.Mutex? _instanceMutex;
+
+        private System.Windows.Forms.NotifyIcon? _trayIcon;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // ── Single-instance guard ────────────────────────────────
+            _instanceMutex = new System.Threading.Mutex(
+                true, "Global\\EAMAS_SingleInstance_3F8A2B1C", out bool isNewInstance);
+
+            if (!isNewInstance)
+            {
+                System.Windows.MessageBox.Show(
+                    "EAMAS is already running on this computer.\n\n" +
+                    "Check the system tray (bottom-right of the taskbar).",
+                    "EAMAS Already Running",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                _instanceMutex.Dispose();
+                Shutdown(0);
+                return;
+            }
+
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             DispatcherUnhandledException += (s, ex) =>
             {
                 System.Windows.MessageBox.Show(
@@ -42,14 +65,12 @@ namespace EAMAS.Desktop
                 ex.Handled = true;
             };
 
-            // Show connection setup only when no file-based or environment-based connection is available.
             if (!ConfigFileExists() && !HasEnvironmentConnectionString())
             {
                 var setup = new ConnectionSetupWindow();
                 setup.ShowDialog();
                 if (!setup.Saved)
                 {
-                    // User cancelled - cannot continue without a database.
                     Shutdown(0);
                     return;
                 }
@@ -86,37 +107,111 @@ namespace EAMAS.Desktop
                 return;
             }
 
+            SetupTrayIcon();
+
             var login = Services.GetRequiredService<LoginWindow>();
             login.Show();
         }
 
-        private static string ConfigFilePath => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "EAMAS", "config.json");
+        // ── System Tray ──────────────────────────────────────────────────────────
 
-        private static bool ConfigFileExists() => File.Exists(ConfigFilePath);
-
-        private static bool HasEnvironmentConnectionString() =>
-            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DATABASE_URL"));
-
-        private static void DeleteConfigFile()
+        private void SetupTrayIcon()
         {
-            if (File.Exists(ConfigFilePath))
-                File.Delete(ConfigFilePath);
+            System.Drawing.Icon icon;
+            try
+            {
+                var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName
+                              ?? string.Empty;
+                icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath)
+                       ?? System.Drawing.SystemIcons.Application;
+            }
+            catch
+            {
+                icon = System.Drawing.SystemIcons.Application;
+            }
+
+            _trayIcon = new System.Windows.Forms.NotifyIcon
+            {
+                Text = "EAMAS — Employee Activity Monitor",
+                Icon = icon,
+                Visible = true
+            };
+
+            var menu = new System.Windows.Forms.ContextMenuStrip();
+            menu.Items.Add("Show Dashboard", null, (_, _) => ShowMainWindow());
+            menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+            menu.Items.Add("Exit EAMAS", null, (_, _) => ExitApp());
+
+            _trayIcon.ContextMenuStrip = menu;
+            _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
         }
+
+        private void ShowMainWindow()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var win = Windows.OfType<MainWindow>().FirstOrDefault();
+                if (win != null)
+                {
+                    win.Show();
+                    win.WindowState = WindowState.Normal;
+                    win.Activate();
+                }
+                else
+                {
+                    // Re-create the main window if it was GC'd
+                    var mw = Services.GetRequiredService<MainWindow>();
+                    mw.Show();
+                }
+            });
+        }
+
+        public static void ExitApp()
+        {
+            IsExiting = true;
+            Current.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    var monitoring = Services?.GetService<MonitoringBackgroundService>();
+                    monitoring?.Stop();
+                }
+                catch { }
+
+                // Clear the active session in MongoDB before shutting down
+                TryCloseCurrentSession();
+
+                (Current as App)?._trayIcon?.Dispose();
+                _instanceMutex?.ReleaseMutex();
+                _instanceMutex?.Dispose();
+                Current.Shutdown();
+            });
+        }
+
+        /// <summary>Clears the current user's session token in MongoDB if one is held.</summary>
+        public static void TryCloseCurrentSession()
+        {
+            try
+            {
+                if (CurrentUser != null && CurrentSessionToken != null)
+                {
+                    Services?.GetService<UserService>()
+                             ?.CloseSession(CurrentUser.Id, CurrentSessionToken);
+                    CurrentSessionToken = null;
+                }
+            }
+            catch { /* best-effort — don't crash on exit */ }
+        }
+
+        // ── DI Configuration ─────────────────────────────────────────────────────
 
         private static void ConfigureServices(IServiceCollection services)
         {
-            // MongoDB connection
-            // Priority order:
-            //   1. %LocalAppData%\EAMAS\config.json  (preferred - never commit this file)
-            //   2. DATABASE_URL environment variable
-            //   3. localhost fallback (development only)
             var (connectionString, databaseName) = LoadMongoConfig();
 
             services.AddSingleton(new MongoDbContext(connectionString, databaseName));
 
-            // Core services
+            // Core services (singletons – shared state)
             services.AddSingleton<DatabaseInitializerService>();
             services.AddSingleton<OrganizationService>();
             services.AddSingleton<UserService>();
@@ -141,6 +236,8 @@ namespace EAMAS.Desktop
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<SettingsViewModel>();
             services.AddTransient<EmployeesViewModel>();
+            services.AddTransient<AlertsViewModel>();
+            services.AddTransient<OrganizationsViewModel>();
 
             // Windows / Views
             services.AddTransient<LoginWindow>();
@@ -151,17 +248,28 @@ namespace EAMAS.Desktop
             services.AddTransient<ReportsView>();
             services.AddTransient<SettingsView>();
             services.AddTransient<EmployeesView>();
+            services.AddTransient<AlertsView>();
+            services.AddTransient<OrganizationsView>();
         }
 
-        /// <summary>
-        /// Loads MongoDB connection settings from (in priority order):
-        /// 1. %LocalAppData%\EAMAS\config.json
-        /// 2. DATABASE_URL environment variable
-        /// 3. localhost default
-        /// </summary>
+        // ── MongoDB config resolution ─────────────────────────────────────────────
+
+        private static string ConfigFilePath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "EAMAS", "config.json");
+
+        private static bool ConfigFileExists() => File.Exists(ConfigFilePath);
+
+        private static bool HasEnvironmentConnectionString() =>
+            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DATABASE_URL"));
+
+        private static void DeleteConfigFile()
+        {
+            if (File.Exists(ConfigFilePath)) File.Delete(ConfigFilePath);
+        }
+
         private static (string connectionString, string databaseName) LoadMongoConfig()
         {
-            // 1 - config file
             if (File.Exists(ConfigFilePath))
             {
                 try
@@ -169,32 +277,25 @@ namespace EAMAS.Desktop
                     var json = File.ReadAllText(ConfigFilePath);
                     var cfg = JsonSerializer.Deserialize<MongoConfig>(json);
                     if (cfg != null && !string.IsNullOrWhiteSpace(cfg.ConnectionString))
-                    {
-                        return (
-                            cfg.ConnectionString,
+                        return (cfg.ConnectionString,
                             string.IsNullOrWhiteSpace(cfg.DatabaseName) ? "eamas" : cfg.DatabaseName);
-                    }
                 }
-                catch
-                {
-                    // Fall through to the next resolution strategy.
-                }
+                catch { }
             }
 
-            // 2 - environment variable
             var envUri = Environment.GetEnvironmentVariable("DATABASE_URL");
-            if (!string.IsNullOrWhiteSpace(envUri))
-                return (envUri, "eamas");
+            if (!string.IsNullOrWhiteSpace(envUri)) return (envUri, "eamas");
 
-            // 3 - localhost fallback (development)
-            // Use IPv4 loopback to avoid resolving to IPv6 ::1 when mongod is bound to 127.0.0.1 only.
             return ("mongodb://127.0.0.1:27017", "eamas");
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
-            var monitoring = Services?.GetService<MonitoringBackgroundService>();
-            monitoring?.Stop();
+            TryCloseCurrentSession();
+            _trayIcon?.Dispose();
+            Services?.GetService<MonitoringBackgroundService>()?.Stop();
+            _instanceMutex?.ReleaseMutex();
+            _instanceMutex?.Dispose();
             base.OnExit(e);
         }
 

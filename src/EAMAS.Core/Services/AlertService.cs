@@ -16,7 +16,7 @@ namespace EAMAS.Core.Services
 
         public void CreateAlert(string orgId, string userId, AlertType type, string message)
         {
-            // Prevent duplicates within the last hour
+            // Prevent duplicate alerts of the same type within the last hour
             var cutoff = DateTime.UtcNow.AddHours(-1);
             var recent = _db.Alerts.CountDocuments(a =>
                 a.OrganizationId == orgId &&
@@ -38,12 +38,13 @@ namespace EAMAS.Core.Services
 
         public List<Alert> GetUnread(string orgId, string? userId = null)
         {
-            var filter = Builders<Alert>.Filter.And(
-                Builders<Alert>.Filter.Eq(a => a.OrganizationId, orgId),
-                Builders<Alert>.Filter.Eq(a => a.IsRead, false));
+            var fb = Builders<Alert>.Filter;
+            var filter = fb.And(
+                fb.Eq(a => a.OrganizationId, orgId),
+                fb.Eq(a => a.IsRead, false));
 
             if (userId != null)
-                filter &= Builders<Alert>.Filter.Eq(a => a.UserId, userId);
+                filter &= fb.Eq(a => a.UserId, userId);
 
             return _db.Alerts.Find(filter)
                 .SortByDescending(a => a.CreatedAt)
@@ -62,20 +63,41 @@ namespace EAMAS.Core.Services
                 .ToList();
         }
 
-        public void MarkRead(string alertId)
+        /// <summary>SuperAdmin: get alerts across all organisations.</summary>
+        public List<Alert> GetAllOrgs(int limit = 200)
         {
-            var update = Builders<Alert>.Update.Set(a => a.IsRead, true);
-            _db.Alerts.UpdateOne(a => a.Id == alertId, update);
+            return _db.Alerts.Find(Builders<Alert>.Filter.Empty)
+                .SortByDescending(a => a.CreatedAt)
+                .Limit(limit)
+                .ToList();
         }
 
-        public void MarkAllRead(string orgId, string userId)
+        public void MarkRead(string alertId)
         {
-            var filter = Builders<Alert>.Filter.And(
-                Builders<Alert>.Filter.Eq(a => a.OrganizationId, orgId),
-                Builders<Alert>.Filter.Eq(a => a.UserId, userId),
-                Builders<Alert>.Filter.Eq(a => a.IsRead, false));
-            var update = Builders<Alert>.Update.Set(a => a.IsRead, true);
-            _db.Alerts.UpdateMany(filter, update);
+            _db.Alerts.UpdateOne(a => a.Id == alertId,
+                Builders<Alert>.Update.Set(a => a.IsRead, true));
+        }
+
+        /// <summary>Mark all alerts as read for a given org (userId=null means all users in org).</summary>
+        public void MarkAllRead(string orgId, string? userId = null)
+        {
+            var fb = Builders<Alert>.Filter;
+            var filter = fb.And(
+                fb.Eq(a => a.OrganizationId, orgId),
+                fb.Eq(a => a.IsRead, false));
+
+            if (userId != null)
+                filter &= fb.Eq(a => a.UserId, userId);
+
+            _db.Alerts.UpdateMany(filter, Builders<Alert>.Update.Set(a => a.IsRead, true));
+        }
+
+        /// <summary>SuperAdmin: mark all alerts across all orgs as read.</summary>
+        public void MarkAllReadAllOrgs()
+        {
+            _db.Alerts.UpdateMany(
+                Builders<Alert>.Filter.Eq(a => a.IsRead, false),
+                Builders<Alert>.Update.Set(a => a.IsRead, true));
         }
 
         public void CheckAndGenerateAlerts(string orgId, string userId,
@@ -98,12 +120,22 @@ namespace EAMAS.Core.Services
 
         public int GetUnreadCount(string orgId, string? userId = null)
         {
-            var filter = Builders<Alert>.Filter.And(
-                Builders<Alert>.Filter.Eq(a => a.OrganizationId, orgId),
-                Builders<Alert>.Filter.Eq(a => a.IsRead, false));
+            var fb = Builders<Alert>.Filter;
+            var filter = fb.And(
+                fb.Eq(a => a.OrganizationId, orgId),
+                fb.Eq(a => a.IsRead, false));
+
             if (userId != null)
-                filter &= Builders<Alert>.Filter.Eq(a => a.UserId, userId);
+                filter &= fb.Eq(a => a.UserId, userId);
+
             return (int)_db.Alerts.CountDocuments(filter);
+        }
+
+        /// <summary>SuperAdmin: count unread alerts across all orgs.</summary>
+        public int GetUnreadCountAllOrgs()
+        {
+            return (int)_db.Alerts.CountDocuments(
+                Builders<Alert>.Filter.Eq(a => a.IsRead, false));
         }
     }
 }

@@ -35,7 +35,8 @@
             </StackPanel>
             <Button Content="&#xE710;  Add Employee" Style="{StaticResource PrimaryButton}"
                     Command="{Binding AddNewCommand}"
-                    HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+                    HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}"/>
         </Grid>
 
         <!-- Employee Table -->
