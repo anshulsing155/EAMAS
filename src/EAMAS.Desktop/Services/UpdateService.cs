@@ -20,7 +20,7 @@ namespace EAMAS.Desktop.Services
         //   GitHub raw:  https://raw.githubusercontent.com/YOU/EAMAS/main/version.json
         //   GitHub Gist: https://gist.githubusercontent.com/YOU/GIST_ID/raw/version.json
         public const string VersionManifestUrl =
-            "https://raw.githubusercontent.com/anshulsing155/EAMAS/main/version.json";
+            "https://raw.githubusercontent.com/anshulsing155/EAMAS-updates/main/version.json";
         // ────────────────────────────────────────────────────────────────────────
 
         private static readonly HttpClient _http = new()

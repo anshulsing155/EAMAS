@@ -164,6 +164,9 @@ namespace EAMAS.Desktop.ViewModels
                 var mainWindow = App.Services.GetService(typeof(MainWindow)) as MainWindow;
                 mainWindow?.Show();
 
+                // Update tray to show logged-in state
+                App.SetTrayLoggedIn(user.FullName);
+
                 // Run data-retention purge in background (fire-and-forget)
                 App.RunDataRetentionPurge();
 

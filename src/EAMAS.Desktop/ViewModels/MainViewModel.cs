@@ -150,6 +150,7 @@ namespace EAMAS.Desktop.ViewModels
             _monitoring.Stop();
 
             App.TryCloseCurrentSession();
+            App.SetTrayLoggedOut();
 
             App.CurrentUser = null;
             App.CurrentOrganization = null;

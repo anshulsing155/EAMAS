@@ -13,6 +13,7 @@ $PublishOut   = "$Root\build\publish"
 $InstallerDir = "$Root\installer"
 $VersionJson  = "$Root\version.json"
 $GithubRepo   = "anshulsing155/EAMAS"
+$ManifestRepo = "anshulsing155/EAMAS-updates"
 $TokenFile    = "$env:LOCALAPPDATA\EAMAS\github-token.txt"
 
 # --- Locate Inno Setup -------------------------------------------------------
@@ -101,8 +102,44 @@ $manifest = [ordered]@{
     downloadUrl  = "https://github.com/$GithubRepo/releases/download/v$Version/EAMAS-Setup-$Version.exe"
     releaseNotes = $notes
 }
-$manifest | ConvertTo-Json -Depth 2 | Set-Content $VersionJson -Encoding utf8
+$manifestJson = $manifest | ConvertTo-Json -Depth 2
+$manifestJson | Set-Content $VersionJson -Encoding utf8
 Write-Host "    version.json updated." -ForegroundColor Green
+
+# Push version.json to public manifest repo so clients can check for updates
+Write-Host "    Pushing manifest to public update repo..." -ForegroundColor Yellow
+$manifestToken = if (Test-Path $TokenFile) { (Get-Content $TokenFile -Raw).Trim() } else { "" }
+if ($manifestToken) {
+    $manifestHeaders = @{
+        Authorization          = "Bearer $manifestToken"
+        Accept                 = "application/vnd.github+json"
+        "X-GitHub-Api-Version" = "2022-11-28"
+    }
+    # Get current SHA of version.json in the public repo (needed for update)
+    try {
+        $existing = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/$ManifestRepo/contents/version.json" `
+            -Headers $manifestHeaders -ErrorAction Stop
+        $sha = $existing.sha
+    } catch { $sha = $null }
+
+    $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($manifestJson))
+    $putBody = @{ message = "Update manifest to v$Version"; content = $encoded }
+    if ($sha) { $putBody["sha"] = $sha }
+
+    try {
+        Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/$ManifestRepo/contents/version.json" `
+            -Method PUT -Headers $manifestHeaders `
+            -Body ($putBody | ConvertTo-Json) `
+            -ContentType "application/json; charset=utf-8" | Out-Null
+        Write-Host "    Manifest live at: https://raw.githubusercontent.com/$ManifestRepo/main/version.json" -ForegroundColor Green
+    } catch {
+        Write-Host "    WARNING: Could not push manifest -- $_" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "    WARNING: No token found -- manifest not pushed to public repo." -ForegroundColor Yellow
+}
 
 # --- 5. Commit and push source changes ---------------------------------------
 Write-Host "[5/6] Committing and pushing source changes..." -ForegroundColor Yellow

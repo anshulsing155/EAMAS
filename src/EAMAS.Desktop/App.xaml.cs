@@ -23,6 +23,7 @@ namespace EAMAS.Desktop
         // ── Update state (set once after a successful update check) ──────────────
         private static UpdateInfo? _pendingUpdate;
         private System.Windows.Forms.ToolStripMenuItem? _updateMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem? _showDashboardMenuItem;
 
         public static string CurrentOrgId =>
             CurrentUser?.OrganizationId ?? "SYSTEM";
@@ -131,12 +132,42 @@ namespace EAMAS.Desktop
             };
 
             var menu = new System.Windows.Forms.ContextMenuStrip();
-            menu.Items.Add("Show Dashboard", null, (_, _) => ShowMainWindow());
+            _showDashboardMenuItem = new System.Windows.Forms.ToolStripMenuItem(
+                "Show Dashboard", null, (_, _) => ShowMainWindow());
+            menu.Items.Add(_showDashboardMenuItem);
             menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             menu.Items.Add("Exit EAMAS", null, (_, _) => ExitApp());
 
             _trayIcon.ContextMenuStrip = menu;
             _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
+        }
+
+        // ── Tray state helpers ───────────────────────────────────────────────────
+
+        /// <summary>Called by MainViewModel.Logout — updates tray to reflect no active session.</summary>
+        public static void SetTrayLoggedOut()
+        {
+            Current.Dispatcher.Invoke(() =>
+            {
+                var app = Current as App;
+                if (app?._trayIcon == null) return;
+                app._trayIcon.Text = "EAMAS — Not logged in";
+                if (app._showDashboardMenuItem != null)
+                    app._showDashboardMenuItem.Text = "Open Login";
+            });
+        }
+
+        /// <summary>Called after successful login — restores tray to logged-in state.</summary>
+        public static void SetTrayLoggedIn(string userName)
+        {
+            Current.Dispatcher.Invoke(() =>
+            {
+                var app = Current as App;
+                if (app?._trayIcon == null) return;
+                app._trayIcon.Text = $"EAMAS — {userName}";
+                if (app._showDashboardMenuItem != null)
+                    app._showDashboardMenuItem.Text = "Show Dashboard";
+            });
         }
 
         // ── Auto-update ──────────────────────────────────────────────────────────

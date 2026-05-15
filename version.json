@@ -1,5 +1,5 @@
 {
-  "version": "1.1.2",
-  "downloadUrl": "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.2/EAMAS-Setup-1.1.2.exe",
-  "releaseNotes": "Fixed: Sidebar toggle button could collapse but not re-expand (button was clipped outside visible area when sidebar was collapsed)"
+  "version": "1.1.3",
+  "downloadUrl": "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.3/EAMAS-Setup-1.1.3.exe",
+  "releaseNotes": "Fixed: Update tray notification now works (manifest hosted on public URL). Fixed: Tray icon shows logged-out state after logout. Fixed: Sidebar toggle reopen (v1.1.2). Fixed: Activity Logs crash (v1.1.1)."
 }
