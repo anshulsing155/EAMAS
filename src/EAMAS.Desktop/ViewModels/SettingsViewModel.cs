@@ -8,17 +8,36 @@ namespace EAMAS.Desktop.ViewModels
     {
         private readonly SettingsService _settingsService;
         private readonly UserService _userService;
+        private readonly AuditLogService _auditLogService;
 
+        // ── Monitoring ────────────────────────────────────────────────────────────
         private bool _monitoringEnabled;
         private bool _screenshotsEnabled;
         private int _screenshotInterval;
         private int _idleThreshold;
         private int _maxScreenshotAge;
         private int _jpegQuality;
+        private bool _privacyBlurEnabled;
+
+        // ── Alerts ────────────────────────────────────────────────────────────────
         private bool _alertOnLongIdle;
         private int _longIdleThreshold;
         private bool _alertOnDistracting;
         private int _distractingThreshold;
+        private bool _alertOnLowProductivity;
+        private int _lowProductivityThreshold;
+        private int _lowProductivityMinActive;
+        private bool _alertOnUnauthorizedApp;
+        private string _blockedApplications = string.Empty;
+        private bool _alertOnNoActivity;
+        private int _noActivityThreshold;
+
+        // ── Data retention ────────────────────────────────────────────────────────
+        private int _activityLogRetentionDays;
+        private int _alertRetentionDays;
+        private int _auditLogRetentionDays;
+
+        // ── System / account ──────────────────────────────────────────────────────
         private bool _runOnStartup;
         private string _currentPassword = string.Empty;
         private string _newPassword = string.Empty;
@@ -26,45 +45,66 @@ namespace EAMAS.Desktop.ViewModels
         private string _statusMessage = string.Empty;
         private bool _isSaving;
 
-        public bool MonitoringEnabled { get => _monitoringEnabled; set => Set(ref _monitoringEnabled, value); }
-        public bool ScreenshotsEnabled { get => _screenshotsEnabled; set => Set(ref _screenshotsEnabled, value); }
-        public int ScreenshotInterval { get => _screenshotInterval; set => Set(ref _screenshotInterval, value); }
-        public int IdleThreshold { get => _idleThreshold; set => Set(ref _idleThreshold, value); }
-        public int MaxScreenshotAge { get => _maxScreenshotAge; set => Set(ref _maxScreenshotAge, value); }
-        public int JpegQuality { get => _jpegQuality; set => Set(ref _jpegQuality, value); }
-        public bool AlertOnLongIdle { get => _alertOnLongIdle; set => Set(ref _alertOnLongIdle, value); }
-        public int LongIdleThreshold { get => _longIdleThreshold; set => Set(ref _longIdleThreshold, value); }
-        public bool AlertOnDistracting { get => _alertOnDistracting; set => Set(ref _alertOnDistracting, value); }
-        public int DistractingThreshold { get => _distractingThreshold; set => Set(ref _distractingThreshold, value); }
+        // ── Monitoring properties ─────────────────────────────────────────────────
+        public bool MonitoringEnabled    { get => _monitoringEnabled; set => Set(ref _monitoringEnabled, value); }
+        public bool ScreenshotsEnabled   { get => _screenshotsEnabled; set => Set(ref _screenshotsEnabled, value); }
+        public int  ScreenshotInterval   { get => _screenshotInterval; set => Set(ref _screenshotInterval, value); }
+        public int  IdleThreshold        { get => _idleThreshold; set => Set(ref _idleThreshold, value); }
+        public int  MaxScreenshotAge     { get => _maxScreenshotAge; set => Set(ref _maxScreenshotAge, value); }
+        public int  JpegQuality          { get => _jpegQuality; set => Set(ref _jpegQuality, value); }
+        public bool PrivacyBlurEnabled   { get => _privacyBlurEnabled; set => Set(ref _privacyBlurEnabled, value); }
+
+        // ── Alert properties ──────────────────────────────────────────────────────
+        public bool AlertOnLongIdle          { get => _alertOnLongIdle; set => Set(ref _alertOnLongIdle, value); }
+        public int  LongIdleThreshold        { get => _longIdleThreshold; set => Set(ref _longIdleThreshold, value); }
+        public bool AlertOnDistracting       { get => _alertOnDistracting; set => Set(ref _alertOnDistracting, value); }
+        public int  DistractingThreshold     { get => _distractingThreshold; set => Set(ref _distractingThreshold, value); }
+        public bool AlertOnLowProductivity   { get => _alertOnLowProductivity; set => Set(ref _alertOnLowProductivity, value); }
+        public int  LowProductivityThreshold { get => _lowProductivityThreshold; set => Set(ref _lowProductivityThreshold, value); }
+        public int  LowProductivityMinActive { get => _lowProductivityMinActive; set => Set(ref _lowProductivityMinActive, value); }
+        public bool AlertOnUnauthorizedApp   { get => _alertOnUnauthorizedApp; set => Set(ref _alertOnUnauthorizedApp, value); }
+        public string BlockedApplications   { get => _blockedApplications; set => Set(ref _blockedApplications, value); }
+        public bool AlertOnNoActivity        { get => _alertOnNoActivity; set => Set(ref _alertOnNoActivity, value); }
+        public int  NoActivityThreshold      { get => _noActivityThreshold; set => Set(ref _noActivityThreshold, value); }
+
+        // ── Retention properties ──────────────────────────────────────────────────
+        public int ActivityLogRetentionDays { get => _activityLogRetentionDays; set => Set(ref _activityLogRetentionDays, value); }
+        public int AlertRetentionDays       { get => _alertRetentionDays; set => Set(ref _alertRetentionDays, value); }
+        public int AuditLogRetentionDays    { get => _auditLogRetentionDays; set => Set(ref _auditLogRetentionDays, value); }
+
+        // ── Status / account ──────────────────────────────────────────────────────
         public string StatusMessage { get => _statusMessage; set => Set(ref _statusMessage, value); }
-        public bool IsSaving { get => _isSaving; set => Set(ref _isSaving, value); }
+        public bool   IsSaving      { get => _isSaving; set => Set(ref _isSaving, value); }
 
         public bool RunOnStartup
         {
             get => _runOnStartup;
-            set
-            {
-                Set(ref _runOnStartup, value);
-                SetStartupRegistry(value);
-            }
+            set { Set(ref _runOnStartup, value); SetStartupRegistry(value); }
         }
 
-        public bool IsAdmin => App.CurrentUser?.Role is UserRole.Admin or UserRole.SuperAdmin;
-        public bool IsEmployee => App.CurrentUser?.Role == UserRole.Employee;
+        // ── Computed / read-only ──────────────────────────────────────────────────
+        public bool   IsAdmin        => App.CurrentUser?.Role is UserRole.Admin or UserRole.SuperAdmin;
+        public bool   IsEmployee     => App.CurrentUser?.Role == UserRole.Employee;
         public string CurrentUserName => App.CurrentUser?.FullName ?? App.CurrentUser?.Username ?? "—";
         public string CurrentUserRole => App.CurrentUser?.Role.ToString() ?? "—";
-        public string CurrentOrgName => App.CurrentOrganization?.Name ?? "System";
+        public string CurrentOrgName  => App.CurrentOrganization?.Name ?? "System";
+        public bool   ConsentGiven    => App.CurrentUser?.ConsentGiven ?? false;
 
         public RelayCommand SaveSettingsCommand { get; }
         public RelayCommand ChangePasswordCommand { get; }
+        public RelayCommand RevokeConsentCommand { get; }
 
-        public SettingsViewModel(SettingsService settingsService, UserService userService)
+        public SettingsViewModel(SettingsService settingsService, UserService userService,
+            AuditLogService auditLogService)
         {
             _settingsService = settingsService;
-            _userService = userService;
-            SaveSettingsCommand = new RelayCommand(SaveSettings, () => IsAdmin);
+            _userService     = userService;
+            _auditLogService = auditLogService;
+
+            SaveSettingsCommand  = new RelayCommand(SaveSettings, () => IsAdmin);
             ChangePasswordCommand = new RelayCommand(
                 () => ChangePassword(_currentPassword, _newPassword, _confirmPassword));
+            RevokeConsentCommand = new RelayCommand(RevokeConsent, () => IsEmployee && ConsentGiven);
         }
 
         public void Initialize()
@@ -75,16 +115,29 @@ namespace EAMAS.Desktop.ViewModels
             if (!IsEmployee)
             {
                 var s = _settingsService.GetSettings(App.CurrentOrgId);
-                MonitoringEnabled = s.MonitoringEnabled;
-                ScreenshotsEnabled = s.ScreenshotsEnabled;
-                ScreenshotInterval = s.ScreenshotIntervalMinutes;
-                IdleThreshold = s.IdleThresholdSeconds / 60;
-                MaxScreenshotAge = s.MaxScreenshotAgeDays;
-                JpegQuality = s.JpegQuality;
-                AlertOnLongIdle = s.AlertOnLongIdle;
-                LongIdleThreshold = s.LongIdleThresholdMinutes;
-                AlertOnDistracting = s.AlertOnDistractingUsage;
-                DistractingThreshold = s.DistractingUsageThresholdMinutes;
+                MonitoringEnabled    = s.MonitoringEnabled;
+                ScreenshotsEnabled   = s.ScreenshotsEnabled;
+                ScreenshotInterval   = s.ScreenshotIntervalMinutes;
+                IdleThreshold        = s.IdleThresholdSeconds / 60;
+                MaxScreenshotAge     = s.MaxScreenshotAgeDays;
+                JpegQuality          = s.JpegQuality;
+                PrivacyBlurEnabled   = s.PrivacyBlurEnabled;
+
+                AlertOnLongIdle          = s.AlertOnLongIdle;
+                LongIdleThreshold        = s.LongIdleThresholdMinutes;
+                AlertOnDistracting       = s.AlertOnDistractingUsage;
+                DistractingThreshold     = s.DistractingUsageThresholdMinutes;
+                AlertOnLowProductivity   = s.AlertOnLowProductivity;
+                LowProductivityThreshold = s.LowProductivityThresholdPercent;
+                LowProductivityMinActive = s.LowProductivityMinActiveMinutes;
+                AlertOnUnauthorizedApp   = s.AlertOnUnauthorizedApp;
+                BlockedApplications      = s.BlockedApplications;
+                AlertOnNoActivity        = s.AlertOnNoActivity;
+                NoActivityThreshold      = s.NoActivityThresholdMinutes;
+
+                ActivityLogRetentionDays = s.ActivityLogRetentionDays;
+                AlertRetentionDays       = s.AlertRetentionDays;
+                AuditLogRetentionDays    = s.AuditLogRetentionDays;
             }
         }
 
@@ -104,36 +157,53 @@ namespace EAMAS.Desktop.ViewModels
                 { StatusMessage = "Screenshot quality must be between 1 and 100."; return; }
                 if (LongIdleThreshold < 1 || DistractingThreshold < 1)
                 { StatusMessage = "Alert thresholds must be at least 1 minute."; return; }
+                if (LowProductivityThreshold is < 1 or > 99)
+                { StatusMessage = "Low-productivity threshold must be 1–99%."; return; }
+                if (NoActivityThreshold < 1)
+                { StatusMessage = "No-activity threshold must be at least 1 minute."; return; }
 
                 var existing = _settingsService.GetSettings(App.CurrentOrgId);
-                existing.MonitoringEnabled = MonitoringEnabled;
-                existing.ScreenshotsEnabled = ScreenshotsEnabled;
-                existing.ScreenshotIntervalMinutes = ScreenshotInterval;
-                existing.IdleThresholdSeconds = IdleThreshold * 60;
-                existing.MaxScreenshotAgeDays = MaxScreenshotAge;
-                existing.JpegQuality = JpegQuality;
-                existing.AlertOnLongIdle = AlertOnLongIdle;
-                existing.LongIdleThresholdMinutes = LongIdleThreshold;
-                existing.AlertOnDistractingUsage = AlertOnDistracting;
+                existing.MonitoringEnabled           = MonitoringEnabled;
+                existing.ScreenshotsEnabled          = ScreenshotsEnabled;
+                existing.ScreenshotIntervalMinutes   = ScreenshotInterval;
+                existing.IdleThresholdSeconds        = IdleThreshold * 60;
+                existing.MaxScreenshotAgeDays        = MaxScreenshotAge;
+                existing.JpegQuality                 = JpegQuality;
+                existing.PrivacyBlurEnabled          = PrivacyBlurEnabled;
+                existing.AlertOnLongIdle             = AlertOnLongIdle;
+                existing.LongIdleThresholdMinutes    = LongIdleThreshold;
+                existing.AlertOnDistractingUsage     = AlertOnDistracting;
                 existing.DistractingUsageThresholdMinutes = DistractingThreshold;
+                existing.AlertOnLowProductivity      = AlertOnLowProductivity;
+                existing.LowProductivityThresholdPercent  = LowProductivityThreshold;
+                existing.LowProductivityMinActiveMinutes  = LowProductivityMinActive;
+                existing.AlertOnUnauthorizedApp      = AlertOnUnauthorizedApp;
+                existing.BlockedApplications         = BlockedApplications;
+                existing.AlertOnNoActivity           = AlertOnNoActivity;
+                existing.NoActivityThresholdMinutes  = NoActivityThreshold;
+                existing.ActivityLogRetentionDays    = ActivityLogRetentionDays;
+                existing.AlertRetentionDays          = AlertRetentionDays;
+                existing.AuditLogRetentionDays       = AuditLogRetentionDays;
 
                 _settingsService.SaveSettings(existing);
+
+                _auditLogService.Log(App.CurrentOrgId, App.CurrentUser!.Id,
+                    App.CurrentUser.FullName, "SettingsChanged",
+                    "Monitoring / alert settings updated.");
+
                 StatusMessage = "Settings saved successfully.";
             }
             catch (Exception ex)
             {
                 StatusMessage = $"Error saving settings: {ex.Message}";
             }
-            finally
-            {
-                IsSaving = false;
-            }
+            finally { IsSaving = false; }
         }
 
         public void SetPasswordInputs(string current, string newPwd, string confirm)
         {
             _currentPassword = current;
-            _newPassword = newPwd;
+            _newPassword     = newPwd;
             _confirmPassword = confirm;
         }
 
@@ -149,7 +219,26 @@ namespace EAMAS.Desktop.ViewModels
             { StatusMessage = "Current password is incorrect."; return; }
 
             _userService.ChangePassword(App.CurrentUser.Id, newPwd);
+
+            _auditLogService.Log(App.CurrentOrgId, App.CurrentUser.Id,
+                App.CurrentUser.FullName, "PasswordChanged", "User changed their own password.");
+
             StatusMessage = "Password changed successfully.";
+        }
+
+        private void RevokeConsent()
+        {
+            var result = System.Windows.MessageBox.Show(
+                "Revoking your monitoring consent will log you out immediately " +
+                "and monitoring will stop.\n\nProceed?",
+                "Revoke Monitoring Consent",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning);
+
+            if (result != System.Windows.MessageBoxResult.Yes) return;
+
+            _userService.SetConsent(App.CurrentUser!.Id, false);
+            App.ExitApp();
         }
 
         // ── Windows Startup Registry ──────────────────────────────────────────────
@@ -173,19 +262,18 @@ namespace EAMAS.Desktop.ViewModels
             {
                 using var key = Registry.CurrentUser.OpenSubKey(_startupKey, writable: true);
                 if (key == null) return;
-
                 if (enable)
                 {
-                    var exePath = System.Diagnostics.Process.GetCurrentProcess()
-                                      .MainModule?.FileName ?? string.Empty;
-                    key.SetValue("EAMAS", $"\"{exePath}\"");
+                    var exe = System.Diagnostics.Process.GetCurrentProcess()
+                                  .MainModule?.FileName ?? string.Empty;
+                    key.SetValue("EAMAS", $"\"{exe}\"");
                 }
                 else
                 {
                     key.DeleteValue("EAMAS", throwOnMissingValue: false);
                 }
             }
-            catch { /* registry access can fail in restricted environments */ }
+            catch { }
         }
     }
 }

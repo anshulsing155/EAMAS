@@ -20,6 +20,10 @@ namespace EAMAS.Desktop
         /// <summary>Organisation the current user belongs to. Null for SuperAdmin.</summary>
         public static Organization? CurrentOrganization { get; set; }
 
+        // ── Update state (set once after a successful update check) ──────────────
+        private static UpdateInfo? _pendingUpdate;
+        private System.Windows.Forms.ToolStripMenuItem? _updateMenuItem;
+
         public static string CurrentOrgId =>
             CurrentUser?.OrganizationId ?? "SYSTEM";
 
@@ -65,18 +69,7 @@ namespace EAMAS.Desktop
                 ex.Handled = true;
             };
 
-            if (!ConfigFileExists() && !HasEnvironmentConnectionString())
-            {
-                var setup = new ConnectionSetupWindow();
-                setup.ShowDialog();
-                if (!setup.Saved)
-                {
-                    Shutdown(0);
-                    return;
-                }
-            }
-
-            var services = new ServiceCollection();
+                var services = new ServiceCollection();
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
 
@@ -146,6 +139,80 @@ namespace EAMAS.Desktop
             _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
         }
 
+        // ── Auto-update ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Checks for an available update in the background after login.
+        /// If a newer version is found the tray icon shows a balloon notification
+        /// and an "Update Available" menu item appears.
+        /// </summary>
+        public static void CheckForUpdatesAsync()
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var svc = new UpdateService();
+                    var update = await svc.CheckForUpdateAsync().ConfigureAwait(false);
+                    if (update == null) return;
+
+                    _pendingUpdate = update;
+
+                    // Marshal to the UI thread to update the tray
+                    Current.Dispatcher.Invoke(() => (Current as App)?.ShowUpdateNotification(update));
+                }
+                catch { /* update check must never crash the app */ }
+            });
+        }
+
+        private void ShowUpdateNotification(UpdateInfo update)
+        {
+            if (_trayIcon == null) return;
+
+            // Insert "Update Available" as the first menu item if not already there
+            if (_updateMenuItem == null)
+            {
+                _updateMenuItem = new System.Windows.Forms.ToolStripMenuItem(
+                    $"⬆  Update to v{update.Version} — click to install",
+                    null,
+                    (_, _) => DownloadUpdate());
+                _updateMenuItem.Font = new System.Drawing.Font(
+                    _updateMenuItem.Font, System.Drawing.FontStyle.Bold);
+                _updateMenuItem.ForeColor = System.Drawing.Color.FromArgb(37, 99, 235);
+
+                var menu = _trayIcon.ContextMenuStrip!;
+                menu.Items.Insert(0, _updateMenuItem);
+                menu.Items.Insert(1, new System.Windows.Forms.ToolStripSeparator());
+            }
+
+            // Balloon tip (visible for ~10 s)
+            _trayIcon.BalloonTipTitle = "EAMAS Update Available";
+            _trayIcon.BalloonTipText  =
+                $"Version {update.Version} is ready.\n" +
+                $"{update.ReleaseNotes}\n\nClick the tray icon to install.";
+            _trayIcon.BalloonTipIcon  = System.Windows.Forms.ToolTipIcon.Info;
+            _trayIcon.ShowBalloonTip(10000);
+        }
+
+        private static void DownloadUpdate()
+        {
+            if (_pendingUpdate == null) return;
+
+            var result = System.Windows.MessageBox.Show(
+                $"EAMAS {_pendingUpdate.Version} is available.\n\n" +
+                $"{_pendingUpdate.ReleaseNotes}\n\n" +
+                "The installer will download and run automatically.\nEAMAS will close and restart after the update.",
+                "Install Update",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information);
+
+            if (result != MessageBoxResult.OK) return;
+
+            var svc = new UpdateService();
+            // Fire-and-forget — ExitApp() is called inside DownloadAndInstallAsync once done
+            Task.Run(() => svc.DownloadAndInstallAsync(_pendingUpdate.DownloadUrl));
+        }
+
         private void ShowMainWindow()
         {
             Dispatcher.Invoke(() =>
@@ -188,6 +255,38 @@ namespace EAMAS.Desktop
             });
         }
 
+        /// <summary>
+        /// Runs background data-retention purge for the current org using the settings configured
+        /// by the admin. Called once after the user successfully logs in.
+        /// </summary>
+        public static void RunDataRetentionPurge()
+        {
+            if (CurrentUser == null) return;
+            Task.Run(() =>
+            {
+                try
+                {
+                    var orgId    = CurrentOrgId;
+                    var settings = Services.GetRequiredService<SettingsService>().GetSettings(orgId);
+
+                    Services.GetRequiredService<ScreenshotService>().PurgeOldScreenshots(orgId);
+
+                    if (settings.ActivityLogRetentionDays > 0)
+                        Services.GetRequiredService<ActivityMonitorService>()
+                                .PurgeOldData(orgId, settings.ActivityLogRetentionDays);
+
+                    if (settings.AlertRetentionDays > 0)
+                        Services.GetRequiredService<AlertService>()
+                                .PurgeOldAlerts(orgId, settings.AlertRetentionDays);
+
+                    if (settings.AuditLogRetentionDays > 0)
+                        Services.GetRequiredService<AuditLogService>()
+                                .PurgeOld(orgId, settings.AuditLogRetentionDays);
+                }
+                catch { /* best-effort — don't crash on retention errors */ }
+            });
+        }
+
         /// <summary>Clears the current user's session token in MongoDB if one is held.</summary>
         public static void TryCloseCurrentSession()
         {
@@ -222,9 +321,11 @@ namespace EAMAS.Desktop
             services.AddSingleton<AnalyticsService>();
             services.AddSingleton<AlertService>();
             services.AddSingleton<SettingsService>();
+            services.AddSingleton<AuditLogService>();
 
             // Desktop services
             services.AddSingleton<NavigationService>();
+            services.AddSingleton<ScreenshotPrivacyService>();
             services.AddSingleton<MonitoringBackgroundService>();
 
             // ViewModels
@@ -268,6 +369,14 @@ namespace EAMAS.Desktop
             if (File.Exists(ConfigFilePath)) File.Delete(ConfigFilePath);
         }
 
+        // Embedded cloud connection — used when no config file or DATABASE_URL env var is present.
+        private const string DefaultConnectionString =
+            "mongodb://tech:eYant1234@cluster0-shard-00-00.7fpyy.mongodb.net:27017," +
+            "cluster0-shard-00-01.7fpyy.mongodb.net:27017," +
+            "cluster0-shard-00-02.7fpyy.mongodb.net:27017/" +
+            "digitaldsa?ssl=true&authSource=admin&retryWrites=true&w=majority";
+        private const string DefaultDatabaseName = "eamas";
+
         private static (string connectionString, string databaseName) LoadMongoConfig()
         {
             if (File.Exists(ConfigFilePath))
@@ -278,15 +387,15 @@ namespace EAMAS.Desktop
                     var cfg = JsonSerializer.Deserialize<MongoConfig>(json);
                     if (cfg != null && !string.IsNullOrWhiteSpace(cfg.ConnectionString))
                         return (cfg.ConnectionString,
-                            string.IsNullOrWhiteSpace(cfg.DatabaseName) ? "eamas" : cfg.DatabaseName);
+                            string.IsNullOrWhiteSpace(cfg.DatabaseName) ? DefaultDatabaseName : cfg.DatabaseName);
                 }
                 catch { }
             }
 
             var envUri = Environment.GetEnvironmentVariable("DATABASE_URL");
-            if (!string.IsNullOrWhiteSpace(envUri)) return (envUri, "eamas");
+            if (!string.IsNullOrWhiteSpace(envUri)) return (envUri, DefaultDatabaseName);
 
-            return ("mongodb://127.0.0.1:27017", "eamas");
+            return (DefaultConnectionString, DefaultDatabaseName);
         }
 
         protected override void OnExit(ExitEventArgs e)

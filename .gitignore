@@ -26,3 +26,7 @@ packages/
 # Rider
 .idea/
 *.sln.iml
+
+# Build output and installer binaries (large — upload to GitHub Releases instead)
+build/
+installer/*.exe

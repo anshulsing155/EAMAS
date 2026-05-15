@@ -32,5 +32,16 @@ namespace EAMAS.Core.Models
         public long FileSizeBytes { get; set; }
         public bool IsSensitive { get; set; }
         public bool IsManual { get; set; }
+
+        // ── Privacy blur metadata ─────────────────────────────────────────────────
+
+        /// <summary>True when the stored image has been pixelated by the privacy filter.</summary>
+        public bool IsPrivacyBlurred { get; set; }
+
+        /// <summary>"None", "Partial" (address bar only), or "Full" (entire screen).</summary>
+        public string PrivacyBlurLevel { get; set; } = "None";
+
+        /// <summary>Human-readable reason why the blur was applied, e.g. "net banking".</summary>
+        public string? PrivacyBlurReason { get; set; }
     }
 }

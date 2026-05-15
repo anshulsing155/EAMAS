@@ -7,7 +7,6 @@
         <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
         <conv:BoolToVisibilityConverter x:Key="BoolVisInverse" Invert="True"/>
         <conv:NullToVisibilityConverter x:Key="NullVis"/>
-        <conv:BoolToHighlightBrushConverter x:Key="UnreadBrush"/>
     </UserControl.Resources>
 
     <Grid Margin="28,24">
@@ -54,19 +53,13 @@
                         <DataTemplate>
                             <Border Padding="20,14"
                                     BorderBrush="{StaticResource BorderBrush}"
-                                    BorderThickness="0,0,0,1"
-                                    Background="{Binding IsRead,
-                                        Converter={StaticResource UnreadBrush},
-                                        ConverterParameter=invert}">
+                                    BorderThickness="0,0,0,1">
                                 <Border.Style>
                                     <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsRead}" Value="False">
-                                                <Setter Property="Background">
-                                                    <Setter.Value>
-                                                        <SolidColorBrush Color="#F0F5FF"/>
-                                                    </Setter.Value>
-                                                </Setter>
+                                                <Setter Property="Background" Value="#EFF6FF"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>

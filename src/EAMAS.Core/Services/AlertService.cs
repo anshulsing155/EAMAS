@@ -100,22 +100,80 @@ namespace EAMAS.Core.Services
                 Builders<Alert>.Update.Set(a => a.IsRead, true));
         }
 
-        public void CheckAndGenerateAlerts(string orgId, string userId,
-            SystemSettings settings, TimeSpan currentIdleTime, TimeSpan distractingTimeToday)
+        /// <summary>
+        /// Evaluates all alert conditions and creates alerts where thresholds are exceeded.
+        /// Called from the monitoring background service on every activity poll cycle.
+        /// </summary>
+        public void CheckAndGenerateAlerts(
+            string orgId, string userId, SystemSettings settings,
+            TimeSpan currentIdleTime, TimeSpan distractingTimeToday,
+            int productivityScore, TimeSpan activeTimeToday, string currentProcessName)
         {
+            // ── Long idle ─────────────────────────────────────────────────────────
             if (settings.AlertOnLongIdle &&
                 currentIdleTime.TotalMinutes >= settings.LongIdleThresholdMinutes)
             {
                 CreateAlert(orgId, userId, AlertType.LongIdle,
-                    $"Employee has been idle for {(int)currentIdleTime.TotalMinutes} minutes.");
+                    $"No activity for {(int)currentIdleTime.TotalMinutes} minutes.");
             }
 
+            // ── Distracting usage ─────────────────────────────────────────────────
             if (settings.AlertOnDistractingUsage &&
                 distractingTimeToday.TotalMinutes >= settings.DistractingUsageThresholdMinutes)
             {
                 CreateAlert(orgId, userId, AlertType.DistractingUsage,
-                    $"Distracting usage today: {(int)distractingTimeToday.TotalMinutes} minutes.");
+                    $"Distracting usage today: {(int)distractingTimeToday.TotalMinutes} min " +
+                    $"(threshold: {settings.DistractingUsageThresholdMinutes} min).");
             }
+
+            // ── Low productivity ──────────────────────────────────────────────────
+            // Only fires after the employee has logged enough active time (avoids false
+            // positives early in the day).
+            if (settings.AlertOnLowProductivity &&
+                activeTimeToday.TotalMinutes >= settings.LowProductivityMinActiveMinutes &&
+                productivityScore < settings.LowProductivityThresholdPercent)
+            {
+                CreateAlert(orgId, userId, AlertType.LowProductivity,
+                    $"Productivity score is {productivityScore}% " +
+                    $"(below threshold of {settings.LowProductivityThresholdPercent}%).");
+            }
+
+            // ── Unauthorized app ──────────────────────────────────────────────────
+            if (settings.AlertOnUnauthorizedApp &&
+                !string.IsNullOrWhiteSpace(settings.BlockedApplications) &&
+                !string.IsNullOrWhiteSpace(currentProcessName))
+            {
+                var blocked = settings.BlockedApplications
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                foreach (var app in blocked)
+                {
+                    if (currentProcessName.Contains(app, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CreateAlert(orgId, userId, AlertType.UnauthorizedApp,
+                            $"Unauthorized application in use: {currentProcessName}.");
+                        break;
+                    }
+                }
+            }
+
+            // ── No activity ───────────────────────────────────────────────────────
+            // Fires when idle time exceeds the no-activity threshold (separate from the
+            // long-idle alert, which uses a shorter, configurable threshold).
+            if (settings.AlertOnNoActivity &&
+                currentIdleTime.TotalMinutes >= settings.NoActivityThresholdMinutes)
+            {
+                CreateAlert(orgId, userId, AlertType.NoActivity,
+                    $"No activity recorded for {(int)currentIdleTime.TotalMinutes} minutes.");
+            }
+        }
+
+        /// <summary>Delete alerts older than <paramref name="days"/> days for an org.</summary>
+        public void PurgeOldAlerts(string orgId, int days)
+        {
+            if (days <= 0) return;
+            var cutoff = DateTime.UtcNow.AddDays(-days);
+            _db.Alerts.DeleteMany(a => a.OrganizationId == orgId && a.CreatedAt < cutoff);
         }
 
         public int GetUnreadCount(string orgId, string? userId = null)

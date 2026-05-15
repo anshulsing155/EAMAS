@@ -3,7 +3,7 @@
 
 #define AppName      "EAMAS"
 #define AppFullName  "Employee Activity Monitoring && Analytics System"
-#define AppVersion   "1.0.0"
+#define AppVersion   "1.1.0"
 #define AppPublisher "EAMAS"
 #define AppExeName   "EAMAS.exe"
 #define AppId        "{{3F8A2B1C-D4E5-4F67-8901-ABCDEF234567}"

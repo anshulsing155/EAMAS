@@ -12,10 +12,17 @@
     <ApplicationIcon>..\..\assets\EAMAS.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
-    <PublishSingleFile>false</PublishSingleFile>
+    <PublishSingleFile>true</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Version stamped into the assembly — UpdateService reads this to compare with remote -->
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <Product>EAMAS — Employee Activity Monitoring &amp; Analytics System</Product>
+    <Company>EAMAS</Company>
+    <Copyright>Copyright © 2026 EAMAS</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\EAMAS.Core\EAMAS.Core.csproj" />

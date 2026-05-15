@@ -37,5 +37,11 @@ namespace EAMAS.Core.Models
         public DateTime? SessionStartedAt { get; set; }
         /// <summary>Hostname of the machine that holds the active session.</summary>
         public string? SessionMachine { get; set; }
+
+        // ── Brute-force protection ────────────────────────────────────
+        /// <summary>Consecutive failed login attempts since last successful login.</summary>
+        public int FailedLoginAttempts { get; set; }
+        /// <summary>Account locked until this UTC time; null if not locked.</summary>
+        public DateTime? LockedUntil { get; set; }
     }
 }

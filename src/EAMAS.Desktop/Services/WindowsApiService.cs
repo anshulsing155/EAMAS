@@ -41,7 +41,11 @@ namespace EAMAS.Desktop.Services
         {
             var info = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>() };
             GetLastInputInfo(ref info);
-            var idleTicks = (uint)Environment.TickCount - info.dwTime;
+            // Use unchecked unsigned subtraction so the result wraps correctly when the
+            // 32-bit tick counter rolls over (~49 days of uptime), avoiding a spurious
+            // ~49-day idle time that the original signed cast could produce.
+            uint now       = unchecked((uint)Environment.TickCount);
+            uint idleTicks = unchecked(now - info.dwTime);
             return TimeSpan.FromMilliseconds(idleTicks);
         }
 

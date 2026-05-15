@@ -70,6 +70,9 @@ namespace EAMAS.Core.Data
         public IMongoCollection<SystemSettings> SystemSettings =>
             _db.GetCollection<SystemSettings>("system_settings");
 
+        public IMongoCollection<AuditLog> AuditLogs =>
+            _db.GetCollection<AuditLog>("audit_logs");
+
         /// <summary>GridFS bucket for full-resolution screenshot images.</summary>
         public IGridFSBucket ScreenshotBucket => _screenshotBucket;
 
@@ -123,6 +126,12 @@ namespace EAMAS.Core.Data
             await SystemSettings.Indexes.CreateOneAsync(new CreateIndexModel<SystemSettings>(
                 Builders<SystemSettings>.IndexKeys.Ascending(x => x.OrganizationId),
                 new CreateIndexOptions { Unique = true, Background = true })).ConfigureAwait(false);
+
+            await AuditLogs.Indexes.CreateOneAsync(new CreateIndexModel<AuditLog>(
+                Builders<AuditLog>.IndexKeys
+                    .Ascending(x => x.OrganizationId)
+                    .Descending(x => x.Timestamp),
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
         }
 
         private async Task EnsureIndexesWithRetryAsync(TimeSpan initialDelay, int maxAttempts = 5)

@@ -9,6 +9,7 @@ namespace EAMAS.Desktop.ViewModels
     {
         private readonly UserService _userService;
         private readonly ReportService _reportService;
+        private readonly AuditLogService _auditLogService;
 
         private ObservableCollection<User> _employees = new();
         private User? _selectedEmployee;
@@ -42,10 +43,16 @@ namespace EAMAS.Desktop.ViewModels
                 Set(ref _editRoleString, value);
             }
         }
-        public bool IsNewUser { get => _isNewUser; set => Set(ref _isNewUser, value); }
+        public bool IsNewUser
+        {
+            get => _isNewUser;
+            set { Set(ref _isNewUser, value); OnPropertyChanged(nameof(IsUsernameEditable)); }
+        }
         public string StatusMessage { get => _statusMessage; set => Set(ref _statusMessage, value); }
 
         public bool IsAdmin => App.CurrentUser?.Role == UserRole.Admin;
+        /// <summary>Username is only settable when creating a new user; cannot be changed after creation.</summary>
+        public bool IsUsernameEditable => _isNewUser;
 
         /// <summary>Roles an org Admin can assign; excludes Admin to prevent lateral privilege escalation.</summary>
         public List<string> RoleOptions { get; } = new() { "Manager", "Employee" };
@@ -56,10 +63,12 @@ namespace EAMAS.Desktop.ViewModels
         public RelayCommand DeactivateCommand { get; }
         public RelayCommand LoadCommand { get; }
 
-        public EmployeesViewModel(UserService userService, ReportService reportService)
+        public EmployeesViewModel(UserService userService, ReportService reportService,
+            AuditLogService auditLogService)
         {
-            _userService = userService;
+            _userService   = userService;
             _reportService = reportService;
+            _auditLogService = auditLogService;
             AddNewCommand = new RelayCommand(AddNew);
             SaveCommand = new RelayCommand(Save);
             CancelEditCommand = new RelayCommand(() => IsEditPanelOpen = false);
@@ -125,6 +134,8 @@ namespace EAMAS.Desktop.ViewModels
                 }
                 _userService.CreateUser(App.CurrentOrgId, EditUsername, EditPassword,
                     EditFullName, EditEmail, EditDepartment, EditRole);
+                _auditLogService.Log(App.CurrentOrgId, App.CurrentUser!.Id, App.CurrentUser.FullName,
+                    "UserCreated", $"Created {EditRole} '{EditFullName}' (username: {EditUsername}).");
                 StatusMessage = $"User '{EditFullName}' created successfully.";
             }
             else
@@ -139,8 +150,15 @@ namespace EAMAS.Desktop.ViewModels
                     Role = EditRole,
                     IsActive = true
                 });
-                if (!string.IsNullOrWhiteSpace(EditPassword) && EditPassword.Length >= 6)
+                if (!string.IsNullOrWhiteSpace(EditPassword))
+                {
+                    if (EditPassword.Length < 6)
+                    { StatusMessage = "New password must be at least 6 characters."; return; }
                     _userService.ChangePassword(_editId, EditPassword);
+                }
+
+                _auditLogService.Log(App.CurrentOrgId, App.CurrentUser!.Id, App.CurrentUser.FullName,
+                    "UserUpdated", $"Updated profile of '{EditFullName}' (id: {_editId}).");
                 StatusMessage = "User updated successfully.";
             }
 
@@ -161,6 +179,8 @@ namespace EAMAS.Desktop.ViewModels
                 "Confirm Deactivation", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes) return;
             _userService.DeleteUser(SelectedEmployee.Id);
+            _auditLogService.Log(App.CurrentOrgId, App.CurrentUser!.Id, App.CurrentUser.FullName,
+                "UserDeactivated", $"Deactivated '{SelectedEmployee.FullName}' (id: {SelectedEmployee.Id}).");
             Load();
             IsEditPanelOpen = false;
         }

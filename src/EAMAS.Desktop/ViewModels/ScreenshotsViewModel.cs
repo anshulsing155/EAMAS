@@ -17,6 +17,25 @@ namespace EAMAS.Desktop.ViewModels
         public string AppName { get; set; } = string.Empty;
         public string SizeLabel { get; set; } = string.Empty;
         public bool IsManual { get; set; }
+
+        // ── Privacy blur indicators ──────────────────────────────────────────────
+        public bool IsPrivacyBlurred { get; set; }
+        /// <summary>"None", "Partial", or "Full".</summary>
+        public string PrivacyBlurLevel { get; set; } = "None";
+        public string? PrivacyBlurReason { get; set; }
+
+        /// <summary>Short badge label shown on blurred thumbnails.</summary>
+        public string BlurBadgeLabel => PrivacyBlurLevel switch
+        {
+            "Full"    => "Blurred",
+            "Partial" => "Partial",
+            _         => string.Empty
+        };
+
+        /// <summary>Tooltip shown on the privacy badge.</summary>
+        public string BlurTooltip => IsPrivacyBlurred
+            ? $"Privacy protected ({PrivacyBlurLevel}): {PrivacyBlurReason}"
+            : string.Empty;
     }
 
     public class ScreenshotsViewModel : BaseViewModel
@@ -48,6 +67,7 @@ namespace EAMAS.Desktop.ViewModels
             set
             {
                 Set(ref _selectedScreenshot, value);
+                OnPropertyChanged(nameof(SelectedIsBlurred));
                 SelectedImageSource = null;
                 if (value != null) _ = LoadFullImageAsync(value);
             }
@@ -68,9 +88,12 @@ namespace EAMAS.Desktop.ViewModels
         public int TotalCount { get => _totalCount; set => Set(ref _totalCount, value); }
         public string StorageLabel { get => _storageLabel; set => Set(ref _storageLabel, value); }
 
-        public bool IsAdmin => App.CurrentUser?.Role is UserRole.Admin or UserRole.SuperAdmin;
-        public bool IsManager => App.CurrentUser?.Role is UserRole.Manager or UserRole.Admin or UserRole.SuperAdmin;
+        public bool IsAdmin    => App.CurrentUser?.Role is UserRole.Admin or UserRole.SuperAdmin;
+        public bool IsManager  => App.CurrentUser?.Role is UserRole.Manager or UserRole.Admin or UserRole.SuperAdmin;
         public bool IsEmployee => App.CurrentUser?.Role == UserRole.Employee;
+
+        /// <summary>True when the selected screenshot has been privacy-blurred.</summary>
+        public bool SelectedIsBlurred => _selectedScreenshot?.IsPrivacyBlurred ?? false;
 
         /// <summary>Employees can view screenshots but cannot capture or delete them.</summary>
         public bool CanModify => !IsEmployee;
@@ -127,13 +150,16 @@ namespace EAMAS.Desktop.ViewModels
 
                 var items = records.Select(r => new ScreenshotItem
                 {
-                    Id = r.Id,
-                    ImageGridFsId = r.ImageGridFsId,
-                    ThumbnailSource = BuildThumbnail(r),
-                    TimeLabel = r.TakenAt.ToLocalTime().ToString("HH:mm:ss"),
-                    AppName = r.ApplicationName,
-                    SizeLabel = FormatSize(r.FileSizeBytes),
-                    IsManual = r.IsManual
+                    Id               = r.Id,
+                    ImageGridFsId    = r.ImageGridFsId,
+                    ThumbnailSource  = BuildThumbnail(r),
+                    TimeLabel        = r.TakenAt.ToLocalTime().ToString("HH:mm:ss"),
+                    AppName          = r.ApplicationName,
+                    SizeLabel        = FormatSize(r.FileSizeBytes),
+                    IsManual         = r.IsManual,
+                    IsPrivacyBlurred = r.IsPrivacyBlurred,
+                    PrivacyBlurLevel = r.PrivacyBlurLevel,
+                    PrivacyBlurReason = r.PrivacyBlurReason
                 }).ToList();
 
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>

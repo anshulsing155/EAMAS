@@ -1,4 +1,5 @@
 using EAMAS.Core.Data;
+using EAMAS.Core.Enums;
 using EAMAS.Core.Models;
 using MongoDB.Driver;
 using System.Security.Cryptography;
@@ -37,24 +38,83 @@ namespace EAMAS.Core.Services
 
         // ── Authentication ───────────────────────────────────────────────────────
 
+        // ── Brute-force constants ────────────────────────────────────────────────
+        private const int MaxFailedAttempts = 5;
+        private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
+
         /// <summary>
         /// Authenticate a user within a specific organisation.
+        /// Returns null on failure; sets <see cref="AuthFailReason"/> so callers can show
+        /// a helpful message without leaking which part (user / password) was wrong.
         /// For SuperAdmin pass organizationId = "SYSTEM".
         /// </summary>
-        public User? Authenticate(string organizationId, string username, string password)
+        public User? Authenticate(string organizationId, string username, string password,
+            out AuthFailReason failReason)
         {
+            failReason = AuthFailReason.None;
+
             var user = _db.Users.Find(u =>
                 u.OrganizationId == organizationId &&
                 u.Username == username &&
                 u.IsActive).FirstOrDefault();
 
-            if (user == null) return null;
-            if (!VerifyPassword(password, user.PasswordHash)) return null;
+            if (user == null)
+            {
+                failReason = AuthFailReason.InvalidCredentials;
+                return null;
+            }
 
-            var update = Builders<User>.Update.Set(u => u.LastLogin, DateTime.UtcNow);
-            _db.Users.UpdateOne(u => u.Id == user.Id, update);
+            // ── Lockout check ────────────────────────────────────────────────────
+            if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
+            {
+                var remaining = (int)Math.Ceiling((user.LockedUntil.Value - DateTime.UtcNow).TotalMinutes);
+                failReason = AuthFailReason.AccountLocked;
+                return null;
+            }
+
+            if (!VerifyPassword(password, user.PasswordHash))
+            {
+                // Increment failed counter; lock if threshold reached
+                var newAttempts = user.FailedLoginAttempts + 1;
+                var lockUntil   = newAttempts >= MaxFailedAttempts
+                    ? (DateTime?)DateTime.UtcNow.Add(LockoutDuration)
+                    : null;
+
+                _db.Users.UpdateOne(u => u.Id == user.Id,
+                    Builders<User>.Update
+                        .Set(u => u.FailedLoginAttempts, newAttempts)
+                        .Set(u => u.LockedUntil, lockUntil));
+
+                failReason = lockUntil.HasValue
+                    ? AuthFailReason.AccountLocked
+                    : AuthFailReason.InvalidCredentials;
+                return null;
+            }
+
+            // Success — clear brute-force counters
+            _db.Users.UpdateOne(u => u.Id == user.Id,
+                Builders<User>.Update
+                    .Set(u => u.LastLogin, DateTime.UtcNow)
+                    .Set(u => u.FailedLoginAttempts, 0)
+                    .Set(u => u.LockedUntil, (DateTime?)null));
+
             user.LastLogin = DateTime.UtcNow;
             return user;
+        }
+
+        /// <summary>Overload for callers that don't need the failure reason.</summary>
+        public User? Authenticate(string organizationId, string username, string password)
+            => Authenticate(organizationId, username, password, out _);
+
+        /// <summary>Returns remaining lockout minutes if the account is currently locked, else 0.</summary>
+        public int GetRemainingLockoutMinutes(string organizationId, string username)
+        {
+            var user = _db.Users.Find(u =>
+                u.OrganizationId == organizationId &&
+                u.Username == username).FirstOrDefault();
+
+            if (user?.LockedUntil == null || user.LockedUntil.Value <= DateTime.UtcNow) return 0;
+            return (int)Math.Ceiling((user.LockedUntil.Value - DateTime.UtcNow).TotalMinutes);
         }
 
         // ── Queries ──────────────────────────────────────────────────────────────

@@ -17,6 +17,20 @@ namespace EAMAS.Desktop.ViewModels
         public string CategoryLabel => IsIdle ? "Idle" : Category.ToString();
     }
 
+    /// <summary>
+    /// A single segment on the day timeline.
+    /// LeftMin / WidthMin are in logical minutes (07:00 = 0, 21:00 = 840) so they can
+    /// be placed directly on a Canvas whose Width = 840.
+    /// </summary>
+    public class TimelineSegment
+    {
+        public double LeftMin { get; set; }
+        public double WidthMin { get; set; }
+        public System.Windows.Media.Brush Fill { get; set; } =
+            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.SteelBlue);
+        public string Tooltip { get; set; } = string.Empty;
+    }
+
     public class ActivityLogsViewModel : BaseViewModel
     {
         private readonly ActivityMonitorService _activityService;
@@ -33,8 +47,15 @@ namespace EAMAS.Desktop.ViewModels
         private string _filterText = string.Empty;
         private int _totalRecords;
         private List<ActivityLogItem> _allLogs = new();
+        private List<TimelineSegment> _timelineSegments = new();
+
+        // Timeline covers 07:00–21:00 (840 minutes)
+        private const int TimelineStartHour  = 7;
+        private const int TimelineEndHour    = 21;
+        private const int TimelineSpanMinutes = (TimelineEndHour - TimelineStartHour) * 60;
 
         public ObservableCollection<ActivityLogItem> Logs { get => _logs; set => Set(ref _logs, value); }
+        public List<TimelineSegment> TimelineSegments { get => _timelineSegments; set => Set(ref _timelineSegments, value); }
         public DateTime SelectedDate { get => _selectedDate; set { Set(ref _selectedDate, value); Load(); } }
         public List<User> Users { get => _users; set => Set(ref _users, value); }
         public User? SelectedUser { get => _selectedUser; set { Set(ref _selectedUser, value); Load(); } }
@@ -147,10 +168,13 @@ namespace EAMAS.Desktop.ViewModels
                     UserLabel = l.UserId
                 }).ToList();
 
+                var timeline = BuildTimeline(raw);
+
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     _allLogs = items;
                     TotalRecords = items.Count;
+                    TimelineSegments = timeline;
                     ApplyFilter();
                     IsLoading = false;
                 });
@@ -173,6 +197,59 @@ namespace EAMAS.Desktop.ViewModels
             if (ts.TotalHours >= 1) return $"{(int)ts.TotalHours}h {ts.Minutes:D2}m";
             if (ts.TotalMinutes >= 1) return $"{ts.Minutes}m {ts.Seconds:D2}s";
             return $"{ts.Seconds}s";
+        }
+
+        /// <summary>
+        /// Converts raw ActivityLog records into a list of <see cref="TimelineSegment"/> objects
+        /// whose Left/Width are in logical canvas units (1 unit = 1 minute within 07:00–21:00).
+        /// Segments outside this window are clamped/trimmed; shorter than 0.5 min are skipped.
+        /// </summary>
+        private List<TimelineSegment> BuildTimeline(List<Core.Models.ActivityLog> logs)
+        {
+            var segments = new List<TimelineSegment>();
+            var windowStart = SelectedDate.Date.AddHours(TimelineStartHour);
+            var windowEnd   = SelectedDate.Date.AddHours(TimelineEndHour);
+
+            foreach (var log in logs.OrderBy(l => l.StartTime))
+            {
+                var start = log.StartTime.ToLocalTime();
+                var end   = log.EndTime.ToLocalTime();
+
+                // Clamp to window
+                if (end   <= windowStart) continue;
+                if (start >= windowEnd)   continue;
+                start = start < windowStart ? windowStart : start;
+                end   = end   > windowEnd   ? windowEnd   : end;
+
+                var leftMin  = (start - windowStart).TotalMinutes;
+                var widthMin = (end - start).TotalMinutes;
+                if (widthMin < 0.5) continue;
+
+                var idleBrush = (System.Windows.Media.Brush)
+                    new System.Windows.Media.BrushConverter().ConvertFromString("#94A3B8")!;
+
+                segments.Add(new TimelineSegment
+                {
+                    LeftMin  = leftMin,
+                    WidthMin = widthMin,
+                    Fill     = log.IsIdle ? idleBrush : CategoryFill(log.Category),
+                    Tooltip  = $"{start:HH:mm} – {end:HH:mm}  {log.ApplicationName}  ({FormatDuration(end - start)})"
+                });
+            }
+            return segments;
+        }
+
+        private static System.Windows.Media.Brush CategoryFill(ActivityCategory cat)
+        {
+            var hex = cat switch
+            {
+                ActivityCategory.Productive  => "#16A34A",
+                ActivityCategory.Distracting => "#EF4444",
+                ActivityCategory.Neutral     => "#3B82F6",
+                _                            => "#94A3B8"
+            };
+            return (System.Windows.Media.Brush)
+                new System.Windows.Media.BrushConverter().ConvertFromString(hex)!;
         }
     }
 }

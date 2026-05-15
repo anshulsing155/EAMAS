@@ -158,6 +158,30 @@ namespace EAMAS.Core.Services
                     g => TimeSpan.FromTicks(g.Sum(x => x.Duration.Ticks)));
         }
 
+        // ── Data retention ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Deletes ActivityLog and AppUsage documents older than <paramref name="days"/> days
+        /// for the given organisation. Pass orgId=null to purge across all orgs (SuperAdmin).
+        /// </summary>
+        public void PurgeOldData(string? orgId, int days)
+        {
+            if (days <= 0) return;
+            var cutoff = DateTime.UtcNow.AddDays(-days);
+
+            var logFb = Builders<ActivityLog>.Filter.Lt(x => x.StartTime, cutoff);
+            var usageFb = Builders<AppUsage>.Filter.Lt(x => x.RecordedAt, cutoff);
+
+            if (!string.IsNullOrEmpty(orgId))
+            {
+                logFb   &= Builders<ActivityLog>.Filter.Eq(x => x.OrganizationId, orgId);
+                usageFb &= Builders<AppUsage>.Filter.Eq(x => x.OrganizationId, orgId);
+            }
+
+            _db.ActivityLogs.DeleteMany(logFb);
+            _db.AppUsages.DeleteMany(usageFb);
+        }
+
         /// <summary>Count distinct users who had at least one activity log on the given date.</summary>
         public int GetActiveUserCount(string? orgId, DateTime date)
         {

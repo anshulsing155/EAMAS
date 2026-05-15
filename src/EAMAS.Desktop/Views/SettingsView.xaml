@@ -11,22 +11,25 @@
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="28,24" MaxWidth="760">
-            <!-- Header -->
+        <StackPanel Margin="28,24" MaxWidth="780">
+
+            <!-- ── Header ─────────────────────────────────────────────────────── -->
             <StackPanel Margin="0,0,0,24">
                 <TextBlock Text="Settings" Style="{StaticResource HeadingLarge}"/>
-                <TextBlock Text="Configure monitoring, screenshots, and alerts"
+                <TextBlock Text="Configure monitoring, alerts, privacy and data retention"
                            Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
             </StackPanel>
 
-            <!-- Status message -->
+            <!-- ── Status message ─────────────────────────────────────────────── -->
             <Border Background="#DCFCE7" BorderBrush="#16A34A" BorderThickness="1"
                     CornerRadius="6" Padding="12,8" Margin="0,0,0,16"
                     Visibility="{Binding StatusMessage, Converter={StaticResource MsgVis}}">
                 <TextBlock Text="{Binding StatusMessage}" Foreground="#15803D" FontSize="13"/>
             </Border>
 
-            <!-- Account Info -->
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 ACCOUNT
+                 ═══════════════════════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="Account" Style="{StaticResource HeadingMedium}"
@@ -38,37 +41,62 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="NAME" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CurrentUserName}" Style="{StaticResource BodyText}"
-                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="NAME" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CurrentUserName}" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1">
-                            <TextBlock Text="ROLE" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CurrentUserRole}" Style="{StaticResource BodyText}"
-                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="ROLE" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CurrentUserRole}" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="ORGANISATION" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding CurrentOrgName}" Style="{StaticResource BodyText}"
-                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="ORGANISATION" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CurrentOrgName}" Style="{StaticResource BodyText}" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Grid>
 
                     <Separator Margin="0,16,0,16" Background="{StaticResource BorderBrush}"/>
 
-                    <!-- Run on Windows Startup -->
-                    <StackPanel Orientation="Horizontal">
-                        <CheckBox Content="Run EAMAS on Windows startup (monitoring continues in background)"
-                                  IsChecked="{Binding RunOnStartup}"
-                                  Style="{StaticResource StyledCheckBox}"/>
-                    </StackPanel>
+                    <CheckBox Content="Run EAMAS on Windows startup (monitoring continues in background)"
+                              IsChecked="{Binding RunOnStartup}" Style="{StaticResource StyledCheckBox}"/>
                 </StackPanel>
             </Border>
 
-            <!-- Change Password (all roles) -->
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 EMPLOYEE MONITORING CONSENT  (Employees only)
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16"
+                    Visibility="{Binding IsEmployee, Converter={StaticResource BoolVis}}">
+                <StackPanel>
+                    <TextBlock Text="Monitoring Consent" Style="{StaticResource HeadingMedium}"
+                               FontSize="15" Margin="0,0,0,12"/>
+
+                    <Border CornerRadius="6" Padding="12,10" Margin="0,0,0,12">
+                        <Border.Background>
+                            <SolidColorBrush Color="#DCFCE7"/>
+                        </Border.Background>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="14" Foreground="#16A34A" Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Foreground="#15803D" FontSize="13" VerticalAlignment="Center"
+                                       Text="You have consented to activity monitoring and periodic screenshots."/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryText}" FontSize="12"
+                               Margin="0,0,0,12"
+                               Text="EAMAS monitors your active application windows, tracks usage time, and captures periodic screenshots during your work session. All data is stored securely and is only accessible to your organisation's administrators."/>
+
+                    <Button Content="Revoke My Consent and Log Out"
+                            Command="{Binding RevokeConsentCommand}"
+                            Style="{StaticResource DangerButton}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 CHANGE PASSWORD  (all roles)
+                 ═══════════════════════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="Change Password" Style="{StaticResource HeadingMedium}"
@@ -80,18 +108,15 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                            <TextBlock Text="CURRENT PASSWORD" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="CURRENT PASSWORD" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
                             <PasswordBox x:Name="TxtCurrentPwd" Style="{StaticResource PasswordField}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="4,0">
-                            <TextBlock Text="NEW PASSWORD" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="NEW PASSWORD" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
                             <PasswordBox x:Name="TxtNewPwd" Style="{StaticResource PasswordField}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2" Margin="8,0,0,0">
-                            <TextBlock Text="CONFIRM PASSWORD" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="CONFIRM PASSWORD" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
                             <PasswordBox x:Name="TxtConfirmPwd" Style="{StaticResource PasswordField}"/>
                         </StackPanel>
                     </Grid>
@@ -101,7 +126,9 @@
                 </StackPanel>
             </Border>
 
-            <!-- Monitoring Settings (Admin/Manager only) -->
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 MONITORING  (Admin only)
+                 ═══════════════════════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16"
                     IsEnabled="{Binding IsAdmin}"
                     Visibility="{Binding IsEmployee, Converter={StaticResource BoolVisInverse}}">
@@ -114,8 +141,11 @@
                     </StackPanel>
 
                     <CheckBox Content="Enable activity monitoring" IsChecked="{Binding MonitoringEnabled}"
-                              Style="{StaticResource StyledCheckBox}" Margin="0,0,0,12"/>
+                              Style="{StaticResource StyledCheckBox}" Margin="0,0,0,8"/>
                     <CheckBox Content="Enable screenshot capture" IsChecked="{Binding ScreenshotsEnabled}"
+                              Style="{StaticResource StyledCheckBox}" Margin="0,0,0,8"/>
+                    <CheckBox Content="Blur personally-sensitive screenshots before storing (banking, healthcare, personal messaging)"
+                              IsChecked="{Binding PrivacyBlurEnabled}"
                               Style="{StaticResource StyledCheckBox}" Margin="0,0,0,16"/>
 
                     <Grid>
@@ -125,20 +155,17 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                            <TextBlock Text="SCREENSHOT INTERVAL (min)" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="SCREENSHOT INTERVAL (min)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
                             <TextBox Style="{StaticResource InputField}"
                                      Text="{Binding ScreenshotInterval, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="4,0">
-                            <TextBlock Text="IDLE THRESHOLD (min)" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="IDLE THRESHOLD (min)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
                             <TextBox Style="{StaticResource InputField}"
                                      Text="{Binding IdleThreshold, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2" Margin="8,0,0,0">
-                            <TextBlock Text="SCREENSHOT QUALITY (1-100)" Style="{StaticResource SecondaryText}"
-                                       FontSize="10" Margin="0,0,0,6"/>
+                            <TextBlock Text="SCREENSHOT QUALITY (1–100)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
                             <TextBox Style="{StaticResource InputField}"
                                      Text="{Binding JpegQuality, UpdateSourceTrigger=PropertyChanged}"/>
                         </StackPanel>
@@ -146,65 +173,127 @@
                 </StackPanel>
             </Border>
 
-            <!-- Alerts Settings (Admin only) -->
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 ALERTS  (Admin only)
+                 ═══════════════════════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16"
                     IsEnabled="{Binding IsAdmin}"
                     Visibility="{Binding IsEmployee, Converter={StaticResource BoolVisInverse}}">
                 <StackPanel>
-                    <TextBlock Text="Alerts" Style="{StaticResource HeadingMedium}"
-                               FontSize="15" Margin="0,0,0,16"/>
+                    <TextBlock Text="Alerts" Style="{StaticResource HeadingMedium}" FontSize="15" Margin="0,0,0,16"/>
 
+                    <!-- Long idle -->
                     <CheckBox Content="Alert when employee is idle too long"
-                              IsChecked="{Binding AlertOnLongIdle}"
-                              Style="{StaticResource StyledCheckBox}" Margin="0,0,0,8"/>
+                              IsChecked="{Binding AlertOnLongIdle}" Style="{StaticResource StyledCheckBox}" Margin="0,0,0,6"/>
                     <StackPanel Orientation="Horizontal" Margin="20,0,0,16">
-                        <TextBlock Text="Idle threshold:" Style="{StaticResource SecondaryText}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Idle threshold:" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox Style="{StaticResource InputField}" Width="60"
                                  Text="{Binding LongIdleThreshold, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBlock Text=" minutes" Style="{StaticResource SecondaryText}"
-                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        <TextBlock Text=" minutes" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="4,0,0,0"/>
                     </StackPanel>
 
-                    <CheckBox Content="Alert when distracting usage exceeds threshold"
-                              IsChecked="{Binding AlertOnDistracting}"
-                              Style="{StaticResource StyledCheckBox}" Margin="0,0,0,8"/>
-                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
-                        <TextBlock Text="Threshold:" Style="{StaticResource SecondaryText}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <!-- Distracting usage -->
+                    <CheckBox Content="Alert when distracting app usage exceeds daily threshold"
+                              IsChecked="{Binding AlertOnDistracting}" Style="{StaticResource StyledCheckBox}" Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal" Margin="20,0,0,16">
+                        <TextBlock Text="Threshold:" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox Style="{StaticResource InputField}" Width="60"
                                  Text="{Binding DistractingThreshold, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBlock Text=" minutes per day" Style="{StaticResource SecondaryText}"
-                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        <TextBlock Text=" minutes per day" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- Low productivity -->
+                    <CheckBox Content="Alert when daily productivity score is low"
+                              IsChecked="{Binding AlertOnLowProductivity}" Style="{StaticResource StyledCheckBox}" Margin="0,0,0,6"/>
+                    <Grid Margin="20,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Score below:" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource InputField}" Width="50"
+                                 Text="{Binding LowProductivityThreshold, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Column="2" Text=" % after " Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="4,0,8,0"/>
+                        <TextBox Grid.Column="3" Style="{StaticResource InputField}" Width="60"
+                                 Text="{Binding LowProductivityMinActive, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Column="4" Text=" min of active work" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </Grid>
+
+                    <!-- Unauthorized app -->
+                    <CheckBox Content="Alert when a blocked application is used"
+                              IsChecked="{Binding AlertOnUnauthorizedApp}" Style="{StaticResource StyledCheckBox}" Margin="0,0,0,6"/>
+                    <StackPanel Margin="20,0,0,16">
+                        <TextBlock Text="Blocked process names (comma-separated, e.g. steam,discord,spotify):"
+                                   Style="{StaticResource SecondaryText}" FontSize="11" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource InputField}"
+                                 Text="{Binding BlockedApplications, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+
+                    <!-- No activity -->
+                    <CheckBox Content="Alert when no activity is recorded for an extended period"
+                              IsChecked="{Binding AlertOnNoActivity}" Style="{StaticResource StyledCheckBox}" Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+                        <TextBlock Text="No-activity threshold:" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Style="{StaticResource InputField}" Width="60"
+                                 Text="{Binding NoActivityThreshold, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text=" minutes" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="4,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- Storage / Retention (Admin only) -->
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 STORAGE & DATA RETENTION  (Admin only)
+                 ═══════════════════════════════════════════════════════════════════ -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16"
                     IsEnabled="{Binding IsAdmin}"
                     Visibility="{Binding IsEmployee, Converter={StaticResource BoolVisInverse}}">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <TextBlock Text="Storage" Style="{StaticResource HeadingMedium}" FontSize="15"/>
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource SecondaryText}" FontSize="12" Margin="0,0,0,12"
-                               TextWrapping="Wrap"
-                               Text="Screenshots are stored in MongoDB (GridFS). Set the maximum retention period below."/>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="MAX SCREENSHOT AGE (days)" Style="{StaticResource SecondaryText}"
-                                   FontSize="10" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBox Style="{StaticResource InputField}" Width="80"
-                                 Text="{Binding MaxScreenshotAge, UpdateSourceTrigger=PropertyChanged}"/>
-                    </StackPanel>
+                    <TextBlock Text="Storage &amp; Data Retention" Style="{StaticResource HeadingMedium}"
+                               FontSize="15" Margin="0,0,0,8"/>
+                    <TextBlock TextWrapping="Wrap" Style="{StaticResource SecondaryText}" FontSize="12"
+                               Margin="0,0,0,16"
+                               Text="Set 0 to disable automatic purging. Purge runs when the app starts."/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                            <TextBlock Text="SCREENSHOTS (days)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBox Style="{StaticResource InputField}"
+                                     Text="{Binding MaxScreenshotAge, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="4,0">
+                            <TextBlock Text="ACTIVITY LOGS (days)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBox Style="{StaticResource InputField}"
+                                     Text="{Binding ActivityLogRetentionDays, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Margin="4,0">
+                            <TextBlock Text="ALERTS (days)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBox Style="{StaticResource InputField}"
+                                     Text="{Binding AlertRetentionDays, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Margin="8,0,0,0">
+                            <TextBlock Text="AUDIT LOG (days)" Style="{StaticResource SecondaryText}" FontSize="10" Margin="0,0,0,6"/>
+                            <TextBox Style="{StaticResource InputField}"
+                                     Text="{Binding AuditLogRetentionDays, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </Border>
 
-            <!-- Save Button (Admin only) -->
+            <!-- ── Save button ─────────────────────────────────────────────────── -->
             <Button Content="Save All Settings" Style="{StaticResource PrimaryButton}"
                     Command="{Binding SaveSettingsCommand}"
                     Width="180" HorizontalAlignment="Left"
                     Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}"/>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -23,6 +23,36 @@ namespace EAMAS.Core.Models
         public int LongIdleThresholdMinutes { get; set; } = 30;
         public bool AlertOnDistractingUsage { get; set; } = true;
         public int DistractingUsageThresholdMinutes { get; set; } = 60;
+
+        // ── Low-productivity alert ────────────────────────────────────────────────
+        public bool AlertOnLowProductivity { get; set; } = true;
+        /// <summary>Minimum productivity score (0–100) below which an alert fires.</summary>
+        public int LowProductivityThresholdPercent { get; set; } = 30;
+        /// <summary>Minimum active minutes in the day before the productivity check fires.</summary>
+        public int LowProductivityMinActiveMinutes { get; set; } = 120;
+
+        // ── Unauthorized-app alert ────────────────────────────────────────────────
+        public bool AlertOnUnauthorizedApp { get; set; } = false;
+        /// <summary>Comma-separated process names that are considered unauthorized.</summary>
+        public string BlockedApplications { get; set; } = string.Empty;
+
+        // ── No-activity alert ─────────────────────────────────────────────────────
+        public bool AlertOnNoActivity { get; set; } = true;
+        /// <summary>Minutes of continuous zero-activity during work hours before alert fires.</summary>
+        public int NoActivityThresholdMinutes { get; set; } = 120;
+
+        // ── Screenshot privacy blur ───────────────────────────────────────────────
+        /// <summary>When true, screenshots with personally-sensitive content are pixelated before storage.</summary>
+        public bool PrivacyBlurEnabled { get; set; } = true;
+
+        // ── Data retention ────────────────────────────────────────────────────────
+        /// <summary>Activity logs and AppUsage records older than this are purged. 0 = never purge.</summary>
+        public int ActivityLogRetentionDays { get; set; } = 90;
+        /// <summary>Alert records older than this are purged. 0 = never purge.</summary>
+        public int AlertRetentionDays { get; set; } = 90;
+        /// <summary>Audit log entries older than this are purged. 0 = never purge.</summary>
+        public int AuditLogRetentionDays { get; set; } = 365;
+
         public string ScreenshotsDirectory { get; set; } = string.Empty;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }

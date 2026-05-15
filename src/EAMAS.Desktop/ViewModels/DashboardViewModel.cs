@@ -163,7 +163,7 @@ namespace EAMAS.Desktop.ViewModels
 
             var hourly = _activityService.GetHourlyActivityAllUsers(null, today);
             var totalScreenshots = orgs.Sum(o => _screenshotService.GetTodayCount(o.Id));
-            var alerts = _alertService.GetUnreadCount("SYSTEM", null);
+            var alerts = _alertService.GetUnreadCountAllOrgs();
             var activeUsers = _activityService.GetActiveUserCount(null, today);
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>

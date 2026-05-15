@@ -121,4 +121,5 @@ namespace EAMAS.Desktop.Converters
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => System.Windows.Data.Binding.DoNothing;
     }
+
 }

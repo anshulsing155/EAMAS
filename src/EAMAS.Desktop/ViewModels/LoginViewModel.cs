@@ -1,3 +1,4 @@
+using EAMAS.Core.Enums;
 using EAMAS.Core.Models;
 using EAMAS.Core.Services;
 using EAMAS.Desktop.Views;
@@ -82,11 +83,28 @@ namespace EAMAS.Desktop.ViewModels
                     organizationId = org.Id;
                 }
 
-                var user = _userService.Authenticate(organizationId, Username.Trim(), password);
+                var user = _userService.Authenticate(
+                    organizationId, Username.Trim(), password, out var failReason);
+
                 if (user == null)
                 {
-                    ErrorMessage = "Invalid username or password.";
+                    ErrorMessage = failReason switch
+                    {
+                        AuthFailReason.AccountLocked =>
+                            $"Account is temporarily locked after too many failed attempts. " +
+                            $"Try again in {_userService.GetRemainingLockoutMinutes(organizationId, Username.Trim())} minute(s).",
+                        _ => "Invalid username or password."
+                    };
                     return;
+                }
+
+                // ── Auto-expire stale sessions (> 8 h) ──────────────
+                if (!string.IsNullOrEmpty(user.ActiveSessionToken) &&
+                    user.SessionStartedAt.HasValue &&
+                    (DateTime.UtcNow - user.SessionStartedAt.Value).TotalHours > 8)
+                {
+                    _userService.ForceCloseSession(user.Id);
+                    user = _userService.GetById(user.Id) ?? user; // clear token on local object
                 }
 
                 // ── Single-session enforcement ───────────────────────
@@ -145,6 +163,12 @@ namespace EAMAS.Desktop.ViewModels
 
                 var mainWindow = App.Services.GetService(typeof(MainWindow)) as MainWindow;
                 mainWindow?.Show();
+
+                // Run data-retention purge in background (fire-and-forget)
+                App.RunDataRetentionPurge();
+
+                // Check for software updates in background (fire-and-forget)
+                App.CheckForUpdatesAsync();
 
                 System.Windows.Application.Current.Windows
                     .OfType<LoginWindow>().FirstOrDefault()?.Close();

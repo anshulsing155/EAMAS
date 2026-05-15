@@ -125,10 +125,15 @@ namespace EAMAS.Desktop.ViewModels
             if (CurrentUser == null) return;
             try
             {
-                // SuperAdmin sees all org alerts; admins see all their org's alerts; others see own
-                string? userId = IsAdmin ? null : CurrentUser.Id;
-                string? orgId = IsSuperAdmin ? null : App.CurrentOrgId;
-                UnreadAlerts = _alertService.GetUnreadCount(orgId ?? "SYSTEM", userId);
+                if (IsSuperAdmin)
+                {
+                    UnreadAlerts = _alertService.GetUnreadCountAllOrgs();
+                }
+                else
+                {
+                    string? userId = IsAdmin ? null : CurrentUser.Id;
+                    UnreadAlerts = _alertService.GetUnreadCount(App.CurrentOrgId, userId);
+                }
             }
             catch { /* don't crash on background polling failure */ }
         }

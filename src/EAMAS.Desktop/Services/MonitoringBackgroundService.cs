@@ -1,3 +1,4 @@
+using EAMAS.Core.Enums;
 using EAMAS.Core.Models;
 using EAMAS.Core.Services;
 using System.Drawing;
@@ -12,21 +13,26 @@ namespace EAMAS.Desktop.Services
         private readonly ScreenshotService _screenshotService;
         private readonly AlertService _alertService;
         private readonly SettingsService _settingsService;
+        private readonly ScreenshotPrivacyService _privacyService;
 
         private CancellationTokenSource? _cts;
         private Task? _activityTask;
         private Task? _screenshotTask;
 
-        private string _currentOrgId = string.Empty;
+        private string _currentOrgId  = string.Empty;
         private string _currentUserId = string.Empty;
         private bool _isRunning;
 
         // Current window session tracking
-        private IntPtr _lastWindow = IntPtr.Zero;
+        private IntPtr _lastWindow  = IntPtr.Zero;
         private string _lastProcess = string.Empty;
-        private string _lastTitle = string.Empty;
+        private string _lastTitle   = string.Empty;
         private DateTime _sessionStart = DateTime.MinValue;
         private bool _wasIdle = false;
+
+        // Cached today's productivity score (refreshed every 5 minutes)
+        private int _cachedProductivityScore;
+        private DateTime _productivityScoreCachedAt = DateTime.MinValue;
 
         /// <summary>Fired when the foreground application changes.</summary>
         public event Action<string, string>? ActivityChanged;
@@ -37,24 +43,26 @@ namespace EAMAS.Desktop.Services
             ActivityMonitorService activityService,
             ScreenshotService screenshotService,
             AlertService alertService,
-            SettingsService settingsService)
+            SettingsService settingsService,
+            ScreenshotPrivacyService privacyService)
         {
             _activityService = activityService;
             _screenshotService = screenshotService;
             _alertService = alertService;
             _settingsService = settingsService;
+            _privacyService = privacyService;
         }
 
         /// <summary>Start monitoring for the given user. Not called for SuperAdmin.</summary>
         public void Start(string orgId, string userId)
         {
             if (_isRunning) return;
-            _currentOrgId = orgId;
+            _currentOrgId  = orgId;
             _currentUserId = userId;
             _isRunning = true;
             _cts = new CancellationTokenSource();
 
-            _activityTask = Task.Run(() => ActivityLoop(_cts.Token), _cts.Token);
+            _activityTask   = Task.Run(() => ActivityLoop(_cts.Token),   _cts.Token);
             _screenshotTask = Task.Run(() => ScreenshotLoop(_cts.Token), _cts.Token);
         }
 
@@ -97,41 +105,47 @@ namespace EAMAS.Desktop.Services
         private void PollActivity(SystemSettings settings)
         {
             var idleTime = WindowsApiService.GetIdleTime();
-            var isIdle = idleTime.TotalSeconds >= settings.IdleThresholdSeconds;
-            var now = DateTime.UtcNow;
+            var isIdle   = idleTime.TotalSeconds >= settings.IdleThresholdSeconds;
+            var now      = DateTime.UtcNow;
 
             if (isIdle)
             {
                 if (!_wasIdle)
                 {
                     FlushCurrentSession(now);
-                    _wasIdle = true;
+                    _wasIdle      = true;
                     _sessionStart = now - idleTime;
-                    _lastProcess = "Idle";
-                    _lastTitle = "System Idle";
+                    _lastProcess  = "Idle";
+                    _lastTitle    = "System Idle";
                 }
 
+                var distracting = GetTodayDistractingTime();
+                var activeTime  = GetTodayActiveTime();
+                var score       = GetTodayProductivityScore();
+
                 _alertService.CheckAndGenerateAlerts(
-                    _currentOrgId, _currentUserId, settings, idleTime,
-                    GetTodayDistractingTime());
+                    _currentOrgId, _currentUserId, settings,
+                    idleTime, distracting, score, activeTime, _lastProcess);
                 return;
             }
 
-            var hWnd = WindowsApiService.GetForegroundWindow();
+            var hWnd    = WindowsApiService.GetForegroundWindow();
             if (hWnd == IntPtr.Zero) return;
 
-            var pid = WindowsApiService.GetProcessId(hWnd);
+            var pid     = WindowsApiService.GetProcessId(hWnd);
             var process = WindowsApiService.GetProcessName(pid);
-            var title = WindowsApiService.GetWindowTitle(hWnd);
+            var title   = WindowsApiService.GetWindowTitle(hWnd);
 
             if (_wasIdle)
             {
                 FlushSession(_lastProcess, _lastTitle, _sessionStart, now, isIdle: true);
-                _wasIdle = false;
+                _wasIdle      = false;
                 _sessionStart = now;
-                _lastProcess = process;
-                _lastTitle = title;
-                _lastWindow = hWnd;
+                _lastProcess  = process;
+                _lastTitle    = title;
+                _lastWindow   = hWnd;
+
+                ActivityChanged?.Invoke(FormatAppName(process), title);
                 return;
             }
 
@@ -140,12 +154,26 @@ namespace EAMAS.Desktop.Services
             if (_sessionStart != DateTime.MinValue)
                 FlushCurrentSession(now);
 
-            _lastWindow = hWnd;
+            _lastWindow  = hWnd;
             _lastProcess = process;
-            _lastTitle = title;
+            _lastTitle   = title;
             _sessionStart = now;
 
-            ActivityChanged?.Invoke(process, title);
+            ActivityChanged?.Invoke(FormatAppName(process), title);
+
+            // Check unauthorized-app alert on every process switch
+            if (settings.AlertOnUnauthorizedApp)
+            {
+                var distracting = GetTodayDistractingTime();
+                var activeTime  = GetTodayActiveTime();
+                var score       = GetTodayProductivityScore();
+
+                _alertService.CheckAndGenerateAlerts(
+                    _currentOrgId, _currentUserId, settings,
+                    currentIdleTime: TimeSpan.Zero, distractingTimeToday: distracting,
+                    productivityScore: score, activeTimeToday: activeTime,
+                    currentProcessName: process);
+            }
         }
 
         private void FlushCurrentSession(DateTime end)
@@ -161,14 +189,14 @@ namespace EAMAS.Desktop.Services
 
             var log = new ActivityLog
             {
-                OrganizationId = _currentOrgId,
-                UserId = _currentUserId,
-                StartTime = start,
-                EndTime = end,
-                ProcessName = process,
+                OrganizationId  = _currentOrgId,
+                UserId          = _currentUserId,
+                StartTime       = start,
+                EndTime         = end,
+                ProcessName     = process,
                 ApplicationName = FormatAppName(process),
-                WindowTitle = title,
-                IsIdle = isIdle
+                WindowTitle     = title,
+                IsIdle          = isIdle
             };
 
             _activityService.RecordActivity(log);
@@ -180,7 +208,7 @@ namespace EAMAS.Desktop.Services
         {
             while (!ct.IsCancellationRequested)
             {
-                var settings = _settingsService.GetSettings(_currentOrgId);
+                var settings        = _settingsService.GetSettings(_currentOrgId);
                 var intervalMinutes = Math.Max(1, settings.ScreenshotIntervalMinutes);
 
                 await Task.Delay(TimeSpan.FromMinutes(intervalMinutes), ct).ConfigureAwait(false);
@@ -198,47 +226,94 @@ namespace EAMAS.Desktop.Services
         }
 
         /// <summary>
-        /// Captures the primary screen entirely in memory, uploads to MongoDB GridFS,
-        /// and saves the record. No files are written to local disk.
+        /// Captures the primary screen, applies privacy blur if sensitive content is
+        /// detected, uploads to MongoDB GridFS, and saves the record.
+        /// No files are written to local disk.
         /// </summary>
         private async Task CaptureAndSaveAsync(SystemSettings settings, bool isManual)
         {
-            var hWnd = WindowsApiService.GetForegroundWindow();
-            var pid = WindowsApiService.GetProcessId(hWnd);
-            var currentApp = FormatAppName(WindowsApiService.GetProcessName(pid));
+            // Snapshot the active window *before* the capture so metadata matches the image.
+            var hWnd        = WindowsApiService.GetForegroundWindow();
+            var pid         = WindowsApiService.GetProcessId(hWnd);
+            var processName = WindowsApiService.GetProcessName(pid);
+            var windowTitle = WindowsApiService.GetWindowTitle(hWnd);
+            var currentApp  = FormatAppName(processName);
 
             var bounds = System.Windows.Forms.Screen.PrimaryScreen!.Bounds;
 
             using var bmp = new Bitmap(bounds.Width, bounds.Height);
-            using var g = Graphics.FromImage(bmp);
-            g.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
+            using (var g  = Graphics.FromImage(bmp))
+                g.CopyFromScreen(System.Drawing.Point.Empty, System.Drawing.Point.Empty, bounds.Size);
 
             var jpegEncoder = GetJpegEncoder();
-            var encoderParams = new EncoderParameters(1);
-            encoderParams.Param[0] = new EncoderParameter(
-                Encoder.Quality, (long)settings.JpegQuality);
+            var quality     = (long)Math.Clamp(settings.JpegQuality, 1, 100);
+            var encParams   = new EncoderParameters(1);
+            encParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
 
-            // Full screenshot → MemoryStream
-            using var fullMs = new MemoryStream();
-            bmp.Save(fullMs, jpegEncoder, encoderParams);
-            var fullBytes = fullMs.ToArray();
-
-            // Thumbnail 240×135 → MemoryStream
-            using var thumbBmp = new Bitmap(240, 135);
-            using var tg = Graphics.FromImage(thumbBmp);
-            tg.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-            tg.DrawImage(bmp, 0, 0, 240, 135);
-            using var thumbMs = new MemoryStream();
-            thumbBmp.Save(thumbMs, jpegEncoder, encoderParams);
-            var thumbBytes = thumbMs.ToArray();
-
-            var record = new ScreenshotRecord
+            // ── Full screenshot → bytes ───────────────────────────────────────────
+            byte[] fullBytes;
+            using (var fullMs = new MemoryStream())
             {
-                OrganizationId = _currentOrgId,
-                UserId = _currentUserId,
-                TakenAt = DateTime.UtcNow,
-                ApplicationName = currentApp,
-                IsManual = isManual
+                bmp.Save(fullMs, jpegEncoder, encParams);
+                fullBytes = fullMs.ToArray();
+            }
+
+            // ── Privacy blur ──────────────────────────────────────────────────────
+            bool isPrivacyBlurred    = false;
+            string privacyBlurLevel  = "None";
+            string? privacyBlurReason = null;
+
+            if (settings.PrivacyBlurEnabled)
+            {
+                var (level, reason) = _privacyService.Detect(processName, windowTitle);
+                if (level != PrivacyBlurLevel.None)
+                {
+                    fullBytes        = _privacyService.ApplyBlur(fullBytes, level, settings.JpegQuality);
+                    isPrivacyBlurred = true;
+                    privacyBlurLevel = level.ToString();
+                    privacyBlurReason = reason;
+                }
+            }
+
+            // ── Thumbnail 240×135 ─────────────────────────────────────────────────
+            byte[] thumbBytes;
+            using (var thumbBmp = new Bitmap(240, 135))
+            {
+                using var tg = Graphics.FromImage(thumbBmp);
+                tg.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                tg.DrawImage(bmp, 0, 0, 240, 135);
+
+                using var thumbMs = new MemoryStream();
+                thumbBmp.Save(thumbMs, jpegEncoder, encParams);
+                thumbBytes = thumbMs.ToArray();
+            }
+
+            // If the full image was blurred, regenerate the thumbnail from the blurred bytes
+            // so the thumbnail shown in the gallery also reflects the blur.
+            if (isPrivacyBlurred)
+            {
+                using var blurredMs  = new MemoryStream(fullBytes);
+                using var blurredBmp = new Bitmap(blurredMs);
+                using var tBmp       = new Bitmap(240, 135);
+                using var tg         = Graphics.FromImage(tBmp);
+                tg.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                tg.DrawImage(blurredBmp, 0, 0, 240, 135);
+
+                using var thumbMs2 = new MemoryStream();
+                tBmp.Save(thumbMs2, jpegEncoder, encParams);
+                thumbBytes = thumbMs2.ToArray();
+            }
+
+            var record = new Core.Models.ScreenshotRecord
+            {
+                OrganizationId   = _currentOrgId,
+                UserId           = _currentUserId,
+                TakenAt          = DateTime.UtcNow,
+                ApplicationName  = currentApp,
+                IsManual         = isManual,
+                IsPrivacyBlurred = isPrivacyBlurred,
+                PrivacyBlurLevel = privacyBlurLevel,
+                PrivacyBlurReason = privacyBlurReason
             };
 
             await _screenshotService.SaveScreenshotAsync(fullBytes, thumbBytes, record)
@@ -255,11 +330,58 @@ namespace EAMAS.Desktop.Services
                 var usage = _activityService.GetAppUsage(
                     _currentOrgId, _currentUserId, today, today.AddDays(1));
                 var ticks = usage
-                    .Where(u => u.Category == Core.Enums.ActivityCategory.Distracting)
+                    .Where(u => u.Category == ActivityCategory.Distracting)
                     .Sum(u => u.Duration.Ticks);
                 return TimeSpan.FromTicks(ticks);
             }
             catch { return TimeSpan.Zero; }
+        }
+
+        private TimeSpan GetTodayActiveTime()
+        {
+            try
+            {
+                var today = DateTime.Today;
+                var usage = _activityService.GetAppUsage(
+                    _currentOrgId, _currentUserId, today, today.AddDays(1));
+                var ticks = usage
+                    .Where(u => u.Category != ActivityCategory.Unknown)
+                    .Sum(u => u.Duration.Ticks);
+                return TimeSpan.FromTicks(ticks);
+            }
+            catch { return TimeSpan.Zero; }
+        }
+
+        /// <summary>
+        /// Returns today's productivity score (0–100). The result is cached for 5 minutes
+        /// to avoid hammering the database on every poll cycle.
+        /// </summary>
+        private int GetTodayProductivityScore()
+        {
+            if ((DateTime.UtcNow - _productivityScoreCachedAt).TotalMinutes < 5)
+                return _cachedProductivityScore;
+
+            try
+            {
+                var today  = DateTime.Today;
+                var usage  = _activityService.GetAppUsage(
+                    _currentOrgId, _currentUserId, today, today.AddDays(1));
+
+                var active      = TimeSpan.FromTicks(usage.Where(u => u.Category != ActivityCategory.Unknown).Sum(u => u.Duration.Ticks));
+                var productive  = TimeSpan.FromTicks(usage.Where(u => u.Category == ActivityCategory.Productive).Sum(u => u.Duration.Ticks));
+                var distracting = TimeSpan.FromTicks(usage.Where(u => u.Category == ActivityCategory.Distracting).Sum(u => u.Duration.Ticks));
+
+                int score = active.TotalMinutes > 0
+                    ? (int)Math.Clamp(
+                        (productive.TotalMinutes - distracting.TotalMinutes * 0.5) /
+                        active.TotalMinutes * 100, 0, 100)
+                    : 0;
+
+                _cachedProductivityScore  = score;
+                _productivityScoreCachedAt = DateTime.UtcNow;
+                return score;
+            }
+            catch { return _cachedProductivityScore; }
         }
 
         private static string FormatAppName(string processName)
@@ -267,20 +389,20 @@ namespace EAMAS.Desktop.Services
             if (string.IsNullOrEmpty(processName)) return "Unknown";
             return processName switch
             {
-                "devenv" => "Visual Studio",
-                "code" => "VS Code",
-                "chrome" => "Google Chrome",
-                "firefox" => "Mozilla Firefox",
-                "msedge" => "Microsoft Edge",
-                "winword" => "Microsoft Word",
-                "excel" => "Microsoft Excel",
-                "powerpnt" => "PowerPoint",
-                "OUTLOOK" => "Outlook",
-                "TEAMS" => "Microsoft Teams",
-                "slack" => "Slack",
-                "explorer" => "File Explorer",
-                "notepad" => "Notepad",
-                "cmd" => "Command Prompt",
+                "devenv"              => "Visual Studio",
+                "code"                => "VS Code",
+                "chrome"              => "Google Chrome",
+                "firefox"             => "Mozilla Firefox",
+                "msedge"              => "Microsoft Edge",
+                "winword"             => "Microsoft Word",
+                "excel"               => "Microsoft Excel",
+                "powerpnt"            => "PowerPoint",
+                "OUTLOOK"             => "Outlook",
+                "TEAMS"               => "Microsoft Teams",
+                "slack"               => "Slack",
+                "explorer"            => "File Explorer",
+                "notepad"             => "Notepad",
+                "cmd"                 => "Command Prompt",
                 "powershell" or "pwsh" => "PowerShell",
                 _ => System.Globalization.CultureInfo.CurrentCulture.TextInfo
                          .ToTitleCase(processName.ToLower())
