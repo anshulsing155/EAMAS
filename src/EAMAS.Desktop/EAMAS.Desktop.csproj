@@ -17,9 +17,9 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <!-- Version stamped into the assembly â€” UpdateService reads this to compare with remote -->
-    <Version>1.1.6</Version>
-    <AssemblyVersion>1.1.6.0</AssemblyVersion>
-    <FileVersion>1.1.6.0</FileVersion>
+    <Version>1.1.7</Version>
+    <AssemblyVersion>1.1.7.0</AssemblyVersion>
+    <FileVersion>1.1.7.0</FileVersion>
     <Product>EAMAS â€” Employee Activity Monitoring &amp; Analytics System</Product>
     <Company>EAMAS</Company>
     <Copyright>Copyright Â© 2026 EAMAS</Copyright>
@@ -34,6 +34,7 @@
     <PackageReference Include="QuestPDF" Version="2024.10.4" />
   </ItemGroup>
 </Project>
+
 
 
 

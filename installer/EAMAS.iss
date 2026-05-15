@@ -3,7 +3,7 @@
 
 #define AppName      "EAMAS"
 #define AppFullName  "Employee Activity Monitoring && Analytics System"
-#define AppVersion   "1.1.6"
+#define AppVersion   "1.1.7"
 #define AppPublisher "EAMAS"
 #define AppExeName   "EAMAS.exe"
 #define AppId        "{{3F8A2B1C-D4E5-4F67-8901-ABCDEF234567}"
@@ -123,6 +123,7 @@ Filename: "taskkill.exe"; \
 
 [Messages]
 WelcomeLabel2=This will install [name/ver] on your computer.%n%nEAMAS monitors employee application usage and takes periodic screenshots for productivity tracking.%n%nIt is recommended that you close all other applications before continuing.
+
 
 
 

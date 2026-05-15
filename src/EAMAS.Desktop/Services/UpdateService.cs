@@ -67,36 +67,43 @@ namespace EAMAS.Desktop.Services
         public async Task DownloadAndInstallAsync(string downloadUrl,
             IProgress<int>? progress = null)
         {
-            var filename = "EAMAS-Update-Setup.exe";
-            var dest = Path.Combine(Path.GetTempPath(), filename);
+            var dest = Path.Combine(Path.GetTempPath(), "EAMAS-Update-Setup.exe");
+
+            // Remove any leftover file from a previous attempt so File.Create doesn't fight it
+            if (File.Exists(dest))
+                try { File.Delete(dest); } catch { /* already gone or locked — overwrite below */ }
 
             using var response = await _downloadHttp.GetAsync(
                 downloadUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var total = response.Content.Headers.ContentLength ?? -1L;
+            var total      = response.Content.Headers.ContentLength ?? -1L;
             var downloaded = 0L;
 
-            await using var src  = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            await using var file = File.Create(dest);
-
-            var buffer = new byte[65536];
-            int read;
-            while ((read = await src.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+            // Explicit nested scope so both streams are fully closed/disposed
+            // BEFORE Process.Start — otherwise the file is still locked.
+            await using (var src = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+            await using (var file = File.Create(dest))
             {
-                await file.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
-                downloaded += read;
-                if (total > 0)
-                    progress?.Report((int)(downloaded * 100 / total));
-            }
+                var buffer = new byte[65536];
+                int read;
+                while ((read = await src.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+                {
+                    await file.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
+                    downloaded += read;
+                    if (total > 0)
+                        progress?.Report((int)(downloaded * 100 / total));
+                }
+            } // file and src are fully closed here
 
-            // Launch installer (Inno Setup /SILENT keeps the user informed while suppressing
-            // wizard dialogs; the installer will replace the exe and relaunch if configured).
+            // WorkingDirectory must be a writable location — never the app's install dir
+            // (C:\Program Files) because that is protected and causes "access denied" on launch.
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName        = dest,
-                Arguments       = "/SILENT",
-                UseShellExecute = true
+                FileName         = dest,
+                Arguments        = "/SILENT",
+                UseShellExecute  = true,
+                WorkingDirectory = Path.GetTempPath()
             });
 
             App.ExitApp();
