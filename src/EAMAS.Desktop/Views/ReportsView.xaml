@@ -15,18 +15,39 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="28,24">
-            <!-- Header -->
+
+            <!-- ── Header + export buttons ─────────────────────────────────────── -->
             <Grid Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="Reports &amp; Analytics" Style="{StaticResource HeadingLarge}"/>
                     <TextBlock Text="{Binding SummaryLabel}" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
                 </StackPanel>
-                <Button Content="&#xE8C8;  Export CSV" Style="{StaticResource SecondaryButton}"
-                        Command="{Binding ExportCsvCommand}"
-                        HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                    <Button Command="{Binding ExportCsvCommand}"
+                            Style="{StaticResource SecondaryButton}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                            <TextBlock Text="CSV"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding ExportExcelCommand}"
+                            Style="{StaticResource SecondaryButton}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                            <TextBlock Text="Excel"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{Binding ExportPdfCommand}"
+                            Style="{StaticResource PrimaryButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xEA90;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                            <TextBlock Text="PDF Report"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
 
-            <!-- Controls -->
+            <!-- ── Controls ────────────────────────────────────────────────────── -->
             <Border Style="{StaticResource Card}" Padding="16,12" Margin="0,0,0,16">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -37,29 +58,24 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
-                        <RadioButton Content="Today" Margin="0,0,12,0" FontSize="13"
-                                     IsChecked="{Binding ReportTypeIndex,
-                                         Converter={StaticResource IndexToBoolConv}, ConverterParameter=0}"/>
+                        <RadioButton Content="Today"       Margin="0,0,12,0" FontSize="13"
+                                     IsChecked="{Binding ReportTypeIndex, Converter={StaticResource IndexToBoolConv}, ConverterParameter=0}"/>
                         <RadioButton Content="Last 7 Days" Margin="0,0,12,0" FontSize="13"
-                                     IsChecked="{Binding ReportTypeIndex,
-                                         Converter={StaticResource IndexToBoolConv}, ConverterParameter=1}"/>
-                        <RadioButton Content="This Month" Margin="0,0,12,0" FontSize="13"
-                                     IsChecked="{Binding ReportTypeIndex,
-                                         Converter={StaticResource IndexToBoolConv}, ConverterParameter=2}"/>
-                        <RadioButton Content="Custom" Margin="0,0,8,0" FontSize="13"
-                                     IsChecked="{Binding ReportTypeIndex,
-                                         Converter={StaticResource IndexToBoolConv}, ConverterParameter=3}"/>
+                                     IsChecked="{Binding ReportTypeIndex, Converter={StaticResource IndexToBoolConv}, ConverterParameter=1}"/>
+                        <RadioButton Content="This Month"  Margin="0,0,12,0" FontSize="13"
+                                     IsChecked="{Binding ReportTypeIndex, Converter={StaticResource IndexToBoolConv}, ConverterParameter=2}"/>
+                        <RadioButton Content="Custom"      Margin="0,0,8,0"  FontSize="13"
+                                     IsChecked="{Binding ReportTypeIndex, Converter={StaticResource IndexToBoolConv}, ConverterParameter=3}"/>
                     </StackPanel>
 
-                    <!-- Custom date range -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0">
-                        <DatePicker SelectedDate="{Binding CustomFrom}" Width="120"
-                                    FontSize="13" Margin="0,0,4,0"/>
+                        <DatePicker SelectedDate="{Binding CustomFrom}" Width="120" FontSize="13" Margin="0,0,4,0"/>
                         <TextBlock Text="to" VerticalAlignment="Center" Margin="4,0" Style="{StaticResource SecondaryText}"/>
-                        <DatePicker SelectedDate="{Binding CustomTo}" Width="120" FontSize="13"/>
+                        <DatePicker SelectedDate="{Binding CustomTo}"   Width="120" FontSize="13"/>
+                        <Button Content="Generate" Command="{Binding GenerateCommand}"
+                                Style="{StaticResource SecondaryButton}" Margin="10,0,0,0" Padding="10,4"/>
                     </StackPanel>
 
-                    <!-- User selector -->
                     <ComboBox Grid.Column="3" Style="{StaticResource StyledComboBox}"
                               ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}"
                               DisplayMemberPath="FullName" Width="180"
@@ -67,102 +83,184 @@
                 </Grid>
             </Border>
 
-            <!-- Summary KPIs -->
-            <UniformGrid Rows="1" Columns="3" Margin="0,0,0,20">
-                <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+            <!-- ── Loading overlay ─────────────────────────────────────────────── -->
+            <Border Background="#F0F9FF" CornerRadius="6" Padding="12,8" Margin="0,0,0,12"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BoolVis}}">
+                <TextBlock Text="Loading report data..." Foreground="#0369A1" FontSize="13"/>
+            </Border>
+
+            <!-- ── KPI cards (row 1) ────────────────────────────────────────────── -->
+            <UniformGrid Rows="1" Columns="4" Margin="0,0,0,12">
+                <Border Style="{StaticResource Card}" Margin="0,0,6,0">
                     <StackPanel>
                         <TextBlock Text="TOTAL ACTIVE TIME" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
                         <TextBlock Text="{Binding TotalActiveTime}" FontSize="22" FontWeight="Bold"
                                    Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="keyboard + mouse activity" FontSize="10"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{StaticResource Card}" Margin="4,0,4,0">
+                <Border Style="{StaticResource Card}" Margin="3,0,3,0">
                     <StackPanel>
                         <TextBlock Text="AVG PRODUCTIVITY SCORE" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
                         <TextBlock FontSize="22" FontWeight="Bold"
                                    Foreground="{Binding AvgScore, Converter={StaticResource ScoreColor}}">
-                            <Run Text="{Binding AvgScore, Mode=OneWay}"/>
-                            <Run Text="%"/>
+                            <Run Text="{Binding AvgScore, Mode=OneWay}"/><Run Text="%"/>
                         </TextBlock>
                         <ProgressBar Value="{Binding AvgScore}" Maximum="100"
                                      Style="{StaticResource StyledProgressBar}"
                                      Foreground="{Binding AvgScore, Converter={StaticResource ScoreProgressBrush}}"
-                                     Margin="0,8,0,0"/>
+                                     Margin="0,6,0,0"/>
                     </StackPanel>
                 </Border>
-                <Border Style="{StaticResource Card}" Margin="8,0,0,0">
+                <Border Style="{StaticResource Card}" Margin="3,0,3,0">
+                    <StackPanel>
+                        <TextBlock Text="PRODUCTIVE TIME" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding TotalProductiveTime}" FontSize="22" FontWeight="Bold"
+                                   Foreground="#16A34A"/>
+                        <TextBlock Text="work-related apps" FontSize="10"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="6,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="IDLE / DISTRACTING" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding TotalIdleTime}" FontSize="22" FontWeight="Bold"
+                                   Foreground="#DC2626"/>
+                        <TextBlock Text="no input detected" FontSize="10"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- ── KPI cards (row 2: screenshots + alerts + period + category) ─── -->
+            <UniformGrid Rows="1" Columns="4" Margin="0,0,0,20">
+                <Border Style="{StaticResource Card}" Margin="0,0,6,0">
+                    <StackPanel>
+                        <TextBlock Text="SCREENSHOTS" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding TotalScreenshots}" FontSize="22" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="captured in period" FontSize="10"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="3,0,3,0">
+                    <StackPanel>
+                        <TextBlock Text="ALERTS FIRED" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding AlertCount}" FontSize="22" FontWeight="Bold"
+                                   Foreground="#D97706"/>
+                        <TextBlock Text="policy violations" FontSize="10"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <!-- Category mini breakdown -->
+                <Border Style="{StaticResource Card}" Margin="3,0,3,0">
+                    <StackPanel>
+                        <TextBlock Text="TIME BREAKDOWN" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Productive" FontSize="11" Foreground="#16A34A"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ProductivePct}"  FontSize="11" FontWeight="SemiBold" Foreground="#16A34A"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Neutral"    FontSize="11" Foreground="#D97706" Margin="0,2,0,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding NeutralPct}"     FontSize="11" FontWeight="SemiBold" Foreground="#D97706" Margin="0,2,0,0"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Distracting" FontSize="11" Foreground="#DC2626" Margin="0,2,0,0"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DistractingPct}" FontSize="11" FontWeight="SemiBold" Foreground="#DC2626" Margin="0,2,0,0"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Idle"        FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding IdlePct}"        FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="6,0,0,0">
                     <StackPanel>
                         <TextBlock Text="REPORT PERIOD" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding SummaryLabel}" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding SummaryLabel}" FontSize="14" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </UniformGrid>
 
-            <!-- Charts Row -->
+            <!-- ── Charts row ───────────────────────────────────────────────────── -->
             <Grid Margin="0,0,0,20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Productivity Trend -->
                 <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,10,0">
                     <StackPanel>
                         <TextBlock Text="Daily Productivity Score" Style="{StaticResource HeadingMedium}"
-                                   FontSize="15" Margin="0,0,0,16"/>
+                                   FontSize="15" Margin="0,0,0,4"/>
+                        <TextBlock Text="Green ≥70%  ·  Amber ≥40%  ·  Red &lt;40%"
+                                   FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,14"/>
                         <ctrl:SimpleBarChart Items="{Binding TrendChart}" Height="150" MaxHeightBar="120"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Top Apps -->
                 <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0">
                     <StackPanel>
                         <TextBlock Text="Top Applications" Style="{StaticResource HeadingMedium}"
-                                   FontSize="15" Margin="0,0,0,16"/>
+                                   FontSize="15" Margin="0,0,0,4"/>
+                        <TextBlock Text="by total time spent in period"
+                                   FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,14"/>
                         <ctrl:SimpleBarChart Items="{Binding TopAppsChart}" Height="150" MaxHeightBar="120"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
-            <!-- Daily Summary Table -->
-            <Border Style="{StaticResource Card}" Padding="0">
+            <!-- ── Daily breakdown table ────────────────────────────────────────── -->
+            <Border Style="{StaticResource Card}" Padding="0" Margin="0,0,0,16">
                 <StackPanel>
                     <StackPanel Margin="20,16,20,12">
                         <TextBlock Text="Daily Breakdown" Style="{StaticResource HeadingMedium}" FontSize="15"/>
+                        <TextBlock Text="One row per calendar day — only days with recorded activity are shown"
+                                   FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
                     <DataGrid Style="{StaticResource StyledDataGrid}"
-                              ItemsSource="{Binding Rows}" MaxHeight="340">
+                              ItemsSource="{Binding Rows}" MaxHeight="380">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="DATE" Binding="{Binding Date}" Width="120"/>
-                            <DataGridTextColumn Header="ACTIVE TIME" Binding="{Binding ActiveTime}" Width="100"/>
-                            <DataGridTextColumn Header="IDLE TIME" Binding="{Binding IdleTime}" Width="100"/>
-                            <DataGridTextColumn Header="PRODUCTIVE" Binding="{Binding ProductiveTime}" Width="100"/>
+                            <DataGridTextColumn Header="DATE"        Binding="{Binding Date}"            Width="120"/>
+                            <DataGridTextColumn Header="ACTIVE TIME" Binding="{Binding ActiveTime}"      Width="100"/>
+                            <DataGridTextColumn Header="IDLE TIME"   Binding="{Binding IdleTime}"        Width="90"/>
+                            <DataGridTextColumn Header="PRODUCTIVE"  Binding="{Binding ProductiveTime}"  Width="100"/>
                             <DataGridTextColumn Header="DISTRACTING" Binding="{Binding DistractingTime}" Width="100"/>
-                            <DataGridTemplateColumn Header="SCORE" Width="120">
+                            <DataGridTemplateColumn Header="SCORE" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Margin="12,4" Orientation="Horizontal">
                                             <TextBlock FontWeight="SemiBold" Width="36">
-                                                <Run Text="{Binding Score, Mode=OneWay}"/>
-                                                <Run Text="%"/>
+                                                <Run Text="{Binding Score, Mode=OneWay}"/><Run Text="%"/>
                                                 <TextBlock.Foreground>
-                                                    <SolidColorBrush Color="{Binding Score,
-                                                        Converter={StaticResource ScoreTextColorConv}}"/>
+                                                    <SolidColorBrush Color="{Binding Score, Converter={StaticResource ScoreTextColorConv}}"/>
                                                 </TextBlock.Foreground>
                                             </TextBlock>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="SCREENSHOTS" Binding="{Binding Screenshots}" Width="110"/>
+                            <DataGridTextColumn Header="SCREENSHOTS" Binding="{Binding Screenshots}" Width="100"/>
+                            <DataGridTextColumn Header="TOP APP"     Binding="{Binding TopApp}"      Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </StackPanel>
             </Border>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

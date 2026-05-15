@@ -1,5 +1,5 @@
 ﻿{
-    "version":  "1.1.5",
-    "downloadUrl":  "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.5/EAMAS-Setup-1.1.5.exe",
-    "releaseNotes":  "Add in-app Check for Updates with download progress. Fix update download timeout (was 15s, now unlimited). Both tray and Settings page can now trigger and install updates."
+    "version":  "1.1.6",
+    "downloadUrl":  "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.6/EAMAS-Setup-1.1.6.exe",
+    "releaseNotes":  "Enhanced report export system: PDF reports (cover page, KPIs, daily breakdown, app usage, category analysis, hourly patterns, alerts, audit log), multi-sheet Excel workbooks, richer CSV. New in-app KPI cards showing productive time, idle time, screenshots, alerts count, and category percentage breakdown."
 }

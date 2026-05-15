@@ -19,6 +19,19 @@ namespace EAMAS.Core.Services
         DateTime WeekStart,
         List<(DateTime Date, TimeSpan ActiveTime, int Score)> DailyPoints);
 
+    public record AppUsageDetail(
+        string ApplicationName,
+        string ProcessName,
+        ActivityCategory Category,
+        TimeSpan TotalDuration,
+        int ProductivityRating);
+
+    public record HourlyActivity(
+        int Hour,
+        TimeSpan ActiveTime,
+        TimeSpan ProductiveTime,
+        TimeSpan DistractingTime);
+
     public class ReportService
     {
         private readonly MongoDbContext _db;
@@ -145,6 +158,90 @@ namespace EAMAS.Core.Services
             var scored = summaries.Where(s => s.ActiveTime.TotalMinutes >= 10).ToList();
             if (!scored.Any()) return 0;
             return (int)scored.Average(s => s.ProductivityScore);
+        }
+
+        /// <summary>Per-app usage with category and productivity rating for the period.</summary>
+        public List<AppUsageDetail> GetAppUsageDetails(string orgId, string userId,
+            DateTime from, DateTime to, int take = 20)
+        {
+            var logs = _db.ActivityLogs
+                .Find(x => x.OrganizationId == orgId &&
+                           x.UserId == userId &&
+                           !x.IsIdle &&
+                           x.StartTime >= from &&
+                           x.StartTime < to)
+                .ToList();
+
+            return logs
+                .GroupBy(x => x.ApplicationName)
+                .Select(g =>
+                {
+                    var total      = g.Sum(x => x.Duration.Ticks);
+                    var productive = g.Where(x => x.Category == ActivityCategory.Productive).Sum(x => x.Duration.Ticks);
+                    var distracting= g.Where(x => x.Category == ActivityCategory.Distracting).Sum(x => x.Duration.Ticks);
+                    var dominant   = g.GroupBy(x => x.Category)
+                                      .OrderByDescending(c => c.Sum(x => x.Duration.Ticks))
+                                      .First().Key;
+                    var processName= g.First().ProcessName;
+                    var rating     = total == 0 ? 50
+                        : (int)Math.Clamp(
+                            ((double)productive / total * 100) -
+                            ((double)distracting / total * 50), 0, 100);
+                    return new AppUsageDetail(
+                        g.Key, processName, dominant,
+                        TimeSpan.FromTicks(total), rating);
+                })
+                .OrderByDescending(a => a.TotalDuration)
+                .Take(take)
+                .ToList();
+        }
+
+        /// <summary>Activity broken down by hour-of-day for the full period.</summary>
+        public List<HourlyActivity> GetHourlyBreakdown(string orgId, string userId,
+            DateTime from, DateTime to)
+        {
+            var logs = _db.ActivityLogs
+                .Find(x => x.OrganizationId == orgId &&
+                           x.UserId == userId &&
+                           !x.IsIdle &&
+                           x.StartTime >= from &&
+                           x.StartTime < to)
+                .ToList();
+
+            return Enumerable.Range(0, 24).Select(h =>
+            {
+                var hourLogs    = logs.Where(x => x.StartTime.Hour == h).ToList();
+                var active      = TimeSpan.FromTicks(hourLogs.Sum(x => x.Duration.Ticks));
+                var productive  = TimeSpan.FromTicks(hourLogs
+                    .Where(x => x.Category == ActivityCategory.Productive).Sum(x => x.Duration.Ticks));
+                var distracting = TimeSpan.FromTicks(hourLogs
+                    .Where(x => x.Category == ActivityCategory.Distracting).Sum(x => x.Duration.Ticks));
+                return new HourlyActivity(h, active, productive, distracting);
+            }).ToList();
+        }
+
+        /// <summary>All alerts fired for the user in the given period.</summary>
+        public List<Alert> GetAlertsForPeriod(string orgId, string userId,
+            DateTime from, DateTime to)
+        {
+            return _db.Alerts
+                .Find(x => x.OrganizationId == orgId &&
+                           x.UserId == userId &&
+                           x.CreatedAt >= from &&
+                           x.CreatedAt < to)
+                .SortByDescending(x => x.CreatedAt)
+                .ToList();
+        }
+
+        /// <summary>Audit log entries for the organisation in the given period (admin only).</summary>
+        public List<AuditLog> GetAuditLogsForPeriod(string orgId, DateTime from, DateTime to)
+        {
+            return _db.AuditLogs
+                .Find(x => x.OrganizationId == orgId &&
+                           x.Timestamp >= from &&
+                           x.Timestamp < to)
+                .SortByDescending(x => x.Timestamp)
+                .ToList();
         }
     }
 }
