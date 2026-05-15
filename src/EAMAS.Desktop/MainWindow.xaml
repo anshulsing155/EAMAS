@@ -35,32 +35,16 @@
             <DockPanel>
 
                 <!-- ── Logo + Collapse toggle ─────────────────────── -->
-                <Grid DockPanel.Dock="Top" Margin="16,20,16,0">
+                <!-- Hamburger is Column 0 so it stays within the 54px collapsed width -->
+                <Grid DockPanel.Dock="Top" Margin="13,20,13,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- "E" icon always visible -->
-                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="8"
-                            Background="{StaticResource PrimaryBrush}"
-                            VerticalAlignment="Center">
-                        <TextBlock Text="E" FontSize="18" FontWeight="Bold"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-
-                    <!-- Brand text — hidden when sidebar is collapsed -->
-                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
-                                Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}">
-                        <TextBlock Text="EAMAS" FontSize="15" FontWeight="Bold" Foreground="White"/>
-                        <TextBlock Text="{Binding OrgDisplayName}" FontSize="10"
-                                   Foreground="#64748B" TextTrimming="CharacterEllipsis"/>
-                    </StackPanel>
-
-                    <!-- Hamburger toggle -->
-                    <Button Grid.Column="2" x:Name="BtnToggleSidebar"
+                    <!-- Hamburger toggle — always Column 0, always reachable -->
+                    <Button Grid.Column="0" x:Name="BtnToggleSidebar"
                             Click="BtnToggleSidebar_Click"
                             Width="28" Height="28" Padding="0"
                             Background="Transparent" BorderThickness="0"
@@ -70,6 +54,25 @@
                                    FontSize="14" Foreground="#64748B"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
+
+                    <!-- "E" icon — hidden when collapsed -->
+                    <Border Grid.Column="1" Width="34" Height="34" CornerRadius="8"
+                            Margin="8,0,0,0"
+                            Background="{StaticResource PrimaryBrush}"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}">
+                        <TextBlock Text="E" FontSize="18" FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Brand text — hidden when collapsed -->
+                    <StackPanel Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}">
+                        <TextBlock Text="EAMAS" FontSize="15" FontWeight="Bold" Foreground="White"/>
+                        <TextBlock Text="{Binding OrgDisplayName}" FontSize="10"
+                                   Foreground="#64748B" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
                 </Grid>
 
                 <Separator DockPanel.Dock="Top" Background="#1E293B" Margin="16,14,16,6"/>

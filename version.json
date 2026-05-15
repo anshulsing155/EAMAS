@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
-  "downloadUrl": "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.1/EAMAS-Setup-1.1.1.exe",
-  "releaseNotes": "• Fixed: Activity Logs crash — storm of error dialogs when opening the view\n• Auto-update system — clients notified on new release\n• Screenshot privacy blur (personal apps & banking sites auto-detected)\n• All 5 alert types (Low Productivity, Unauthorized App, No Activity)\n• Brute-force login protection with account lockout\n• Session auto-expiry and single-session enforcement\n• Audit log for all admin and settings changes\n• Activity day timeline (colour-coded 07:00–21:00 strip)\n• Configurable data retention for all record types\n• Employee consent management"
+  "version": "1.1.2",
+  "downloadUrl": "https://github.com/anshulsing155/EAMAS/releases/download/v1.1.2/EAMAS-Setup-1.1.2.exe",
+  "releaseNotes": "Fixed: Sidebar toggle button could collapse but not re-expand (button was clipped outside visible area when sidebar was collapsed)"
 }
