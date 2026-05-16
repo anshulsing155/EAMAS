@@ -6,6 +6,8 @@ using EAMAS.Desktop.ViewModels;
 using EAMAS.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 
@@ -70,7 +72,18 @@ namespace EAMAS.Desktop
                 ex.Handled = true;
             };
 
-                var services = new ServiceCollection();
+            // ── Show connection setup if no valid config exists ───────────────────
+            if (!HasValidConfig())
+            {
+                var setup = new ConnectionSetupWindow();
+                if (setup.ShowDialog() != true)
+                {
+                    Shutdown(0);
+                    return;
+                }
+            }
+
+            var services = new ServiceCollection();
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
 
@@ -92,9 +105,14 @@ namespace EAMAS.Desktop
                 if (answer == MessageBoxResult.Yes)
                 {
                     DeleteConfigFile();
-                    System.Windows.MessageBox.Show(
-                        "Configuration cleared. Please restart EAMAS to set up the connection again.",
-                        "EAMAS", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var setup = new ConnectionSetupWindow();
+                    if (setup.ShowDialog() == true)
+                    {
+                        // Restart the app after successful reconfiguration
+                        System.Diagnostics.Process.Start(
+                            System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName
+                            ?? Environment.ProcessPath ?? "EAMAS.exe");
+                    }
                 }
 
                 Shutdown(1);
@@ -468,45 +486,88 @@ namespace EAMAS.Desktop
 
         private static string ConfigFilePath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "EAMAS", "config.json");
+            "EAMAS", "config.dat");   // .dat — encrypted binary, not plaintext JSON
 
         private static bool ConfigFileExists() => File.Exists(ConfigFilePath);
-
-        private static bool HasEnvironmentConnectionString() =>
-            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DATABASE_URL"));
 
         private static void DeleteConfigFile()
         {
             if (File.Exists(ConfigFilePath)) File.Delete(ConfigFilePath);
+            // Also remove legacy plaintext file if it still exists
+            var legacy = ConfigFilePath.Replace("config.dat", "config.json");
+            if (File.Exists(legacy)) File.Delete(legacy);
         }
 
-        // Embedded cloud connection — used when no config file or DATABASE_URL env var is present.
-        private const string DefaultConnectionString =
-            "mongodb://tech:eYant1234@cluster0-shard-00-00.7fpyy.mongodb.net:27017," +
-            "cluster0-shard-00-01.7fpyy.mongodb.net:27017," +
-            "cluster0-shard-00-02.7fpyy.mongodb.net:27017/" +
-            "digitaldsa?ssl=true&authSource=admin&retryWrites=true&w=majority";
         private const string DefaultDatabaseName = "eamas";
+
+        /// <summary>
+        /// Encrypts <paramref name="connectionString"/> using Windows DPAPI (scoped to the
+        /// current Windows user account) and writes it to the config file.
+        /// The raw connection string is never written to disk in plaintext.
+        /// </summary>
+        public static void SaveConfigEncrypted(string connectionString, string databaseName = DefaultDatabaseName)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(ConfigFilePath)!);
+            var cfg     = new MongoConfig { ConnectionString = connectionString, DatabaseName = databaseName };
+            var json    = JsonSerializer.Serialize(cfg);
+            var raw     = Encoding.UTF8.GetBytes(json);
+            // DPAPI CurrentUser scope: only the current Windows user on this machine can decrypt
+            var enc     = ProtectedData.Protect(raw, null, DataProtectionScope.CurrentUser);
+            File.WriteAllBytes(ConfigFilePath, enc);
+        }
+
+        /// <summary>Returns true if a valid (decryptable, non-empty) connection string is stored.</summary>
+        private static bool HasValidConfig()
+        {
+            var (cs, _) = LoadMongoConfig();
+            return !string.IsNullOrWhiteSpace(cs);
+        }
 
         private static (string connectionString, string databaseName) LoadMongoConfig()
         {
+            // ── 1. Try new encrypted config.dat ──────────────────────────────────
             if (File.Exists(ConfigFilePath))
             {
                 try
                 {
-                    var json = File.ReadAllText(ConfigFilePath);
-                    var cfg = JsonSerializer.Deserialize<MongoConfig>(json);
+                    var enc  = File.ReadAllBytes(ConfigFilePath);
+                    var raw  = ProtectedData.Unprotect(enc, null, DataProtectionScope.CurrentUser);
+                    var json = Encoding.UTF8.GetString(raw);
+                    var cfg  = JsonSerializer.Deserialize<MongoConfig>(json);
                     if (cfg != null && !string.IsNullOrWhiteSpace(cfg.ConnectionString))
                         return (cfg.ConnectionString,
                             string.IsNullOrWhiteSpace(cfg.DatabaseName) ? DefaultDatabaseName : cfg.DatabaseName);
                 }
+                catch { /* fall through to legacy migration */ }
+            }
+
+            // ── 2. Migrate legacy plaintext config.json → encrypted config.dat ───
+            var legacyPath = ConfigFilePath.Replace("config.dat", "config.json");
+            if (File.Exists(legacyPath))
+            {
+                try
+                {
+                    var json = File.ReadAllText(legacyPath);
+                    var cfg  = JsonSerializer.Deserialize<MongoConfig>(json);
+                    if (cfg != null && !string.IsNullOrWhiteSpace(cfg.ConnectionString))
+                    {
+                        var db = string.IsNullOrWhiteSpace(cfg.DatabaseName)
+                            ? DefaultDatabaseName : cfg.DatabaseName;
+                        // Re-save encrypted, then delete the plaintext file
+                        SaveConfigEncrypted(cfg.ConnectionString, db);
+                        File.Delete(legacyPath);
+                        return (cfg.ConnectionString, db);
+                    }
+                }
                 catch { }
             }
 
+            // ── 3. Environment variable (CI / enterprise deployment) ──────────────
             var envUri = Environment.GetEnvironmentVariable("DATABASE_URL");
             if (!string.IsNullOrWhiteSpace(envUri)) return (envUri, DefaultDatabaseName);
 
-            return (DefaultConnectionString, DefaultDatabaseName);
+            // ── 4. No config found — caller must show ConnectionSetupWindow ────────
+            return (string.Empty, DefaultDatabaseName);
         }
 
         protected override void OnExit(ExitEventArgs e)

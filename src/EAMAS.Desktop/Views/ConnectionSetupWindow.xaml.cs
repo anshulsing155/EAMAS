@@ -1,6 +1,4 @@
 using MongoDB.Driver;
-using System.IO;
-using System.Text.Json;
 using System.Windows;
 
 namespace EAMAS.Desktop.Views
@@ -8,10 +6,6 @@ namespace EAMAS.Desktop.Views
     public partial class ConnectionSetupWindow : Window
     {
         public bool Saved { get; private set; }
-
-        private static readonly string ConfigPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "EAMAS", "config.json");
 
         public ConnectionSetupWindow()
         {
@@ -71,7 +65,7 @@ namespace EAMAS.Desktop.Views
         private void SaveConnection_Click(object sender, RoutedEventArgs e)
         {
             var uri = TxtConnectionString.Text.Trim();
-            var db = TxtDatabaseName.Text.Trim();
+            var db  = TxtDatabaseName.Text.Trim();
 
             if (string.IsNullOrWhiteSpace(uri))
             {
@@ -84,12 +78,10 @@ namespace EAMAS.Desktop.Views
 
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!);
-                var json = JsonSerializer.Serialize(
-                    new { ConnectionString = uri, DatabaseName = db },
-                    new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(ConfigPath, json);
+                // Save encrypted via DPAPI — no plaintext credentials on disk
+                App.SaveConfigEncrypted(uri, db);
                 Saved = true;
+                DialogResult = true;
                 Close();
             }
             catch (Exception ex)

@@ -1,0 +1,545 @@
+<Window x:Class="EAMAS.Desktop.Views.ActivityMethodologyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Activity Measurement Guide"
+        Width="780" Height="680"
+        MinWidth="680" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="#F8FAFC"
+        TextOptions.TextFormattingMode="Display">
+
+    <Window.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#1E40AF"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="BodyText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="LineHeight" Value="20"/>
+        </Style>
+        <Style x:Key="LabelText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="ChipText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="Margin" Value="0,2,4,2"/>
+            <Setter Property="Padding" Value="6,2"/>
+        </Style>
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#1E40AF" Padding="24,16">
+            <StackPanel>
+                <TextBlock Text="Activity Measurement Guide"
+                           FontSize="18" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Text="How EAMAS tracks, categorises, and scores employee activity"
+                           FontSize="11" Foreground="#BFDBFE" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Scrollable content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,20,24,4">
+            <StackPanel>
+
+                <!-- ── 1. Time Categories ───────────────────────────────────────── -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="1 — Time Categories" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,14"
+                            Text="Every second of a work session is placed into one of five categories. The category is assigned automatically by examining which application window is in the foreground."/>
+
+                        <UniformGrid Columns="2" Margin="0,0,0,4">
+
+                            <!-- Productive -->
+                            <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1"
+                                    CornerRadius="6" Padding="12,10" Margin="0,0,6,6">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Border Width="10" Height="10" Background="#16A34A"
+                                                CornerRadius="5" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Productive" FontWeight="Bold" FontSize="13"
+                                                   Foreground="#15803D"/>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource LabelText}"
+                                        Text="The active window matches a work-related application — IDE, office suite, communication tool, terminal, design software, or version control. These minutes raise your productivity score."/>
+                                    <TextBlock Text="Score impact: +POSITIVE" FontSize="10"
+                                               Foreground="#16A34A" FontWeight="SemiBold" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Distracting -->
+                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1"
+                                    CornerRadius="6" Padding="12,10" Margin="6,0,0,6">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Border Width="10" Height="10" Background="#DC2626"
+                                                CornerRadius="5" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Distracting" FontWeight="Bold" FontSize="13"
+                                                   Foreground="#B91C1C"/>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource LabelText}"
+                                        Text="The active window matches a non-work application — social media, video streaming, gaming, or entertainment. These minutes lower your productivity score."/>
+                                    <TextBlock Text="Score impact: −NEGATIVE" FontSize="10"
+                                               Foreground="#DC2626" FontWeight="SemiBold" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Neutral -->
+                            <Border Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1"
+                                    CornerRadius="6" Padding="12,10" Margin="0,0,6,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Border Width="10" Height="10" Background="#D97706"
+                                                CornerRadius="5" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Neutral" FontWeight="Bold" FontSize="13"
+                                                   Foreground="#B45309"/>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource LabelText}"
+                                        Text="The active window is neither work-related nor clearly distracting — e.g. File Explorer, Calculator, Notepad, Spotify, or any unrecognised application."/>
+                                    <TextBlock Text="Score impact: NONE (not counted)" FontSize="10"
+                                               Foreground="#D97706" FontWeight="SemiBold" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Idle -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1"
+                                    CornerRadius="6" Padding="12,10" Margin="6,0,0,0">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Border Width="10" Height="10" Background="#94A3B8"
+                                                CornerRadius="5" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Idle" FontWeight="Bold" FontSize="13"
+                                                   Foreground="#475569"/>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource LabelText}"
+                                        Text="No keyboard or mouse input has been detected for the configured idle threshold. The user may be away from the desk, in a meeting, or reading."/>
+                                    <TextBlock Text="Score impact: EXCLUDED from score" FontSize="10"
+                                               Foreground="#94A3B8" FontWeight="SemiBold" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 2. Productivity Score ────────────────────────────────────── -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="2 — Productivity Score" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                            Text="The productivity score is a 0–100 percentage that reflects the share of active time spent on productive work."/>
+
+                        <!-- Formula box -->
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1"
+                                CornerRadius="6" Padding="16,12" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="Score  =  ( Productive Time ÷ Active Time )  ×  100"
+                                           FontFamily="Consolas" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="#1E40AF" TextAlignment="Center"/>
+                                <TextBlock Margin="0,8,0,0" TextAlignment="Center"
+                                           Style="{StaticResource LabelText}"
+                                           Text="Active Time = all time with keyboard or mouse input detected (excludes idle periods)"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Score bands -->
+                        <TextBlock Text="Score bands:" FontWeight="SemiBold" FontSize="11"
+                                   Foreground="#374151" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Border Background="#DCFCE7" CornerRadius="4" Padding="10,5" Margin="0,0,8,0">
+                                <TextBlock Text="≥ 70%  Excellent" FontSize="11" Foreground="#15803D" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Background="#FEF9C3" CornerRadius="4" Padding="10,5" Margin="0,0,8,0">
+                                <TextBlock Text="40 – 69%  Acceptable" FontSize="11" Foreground="#A16207" FontWeight="SemiBold"/>
+                            </Border>
+                            <Border Background="#FEE2E2" CornerRadius="4" Padding="10,5">
+                                <TextBlock Text="&lt; 40%  Needs Attention" FontSize="11" Foreground="#B91C1C" FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 3. How Activity Is Tracked ──────────────────────────────── -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="3 — How Activity Is Tracked" Style="{StaticResource SectionTitle}"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,12,10">
+                                <TextBlock Text="Active Window Sampling" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="#374151" Margin="0,0,0,4"/>
+                                <TextBlock Style="{StaticResource LabelText}"
+                                    Text="EAMAS reads the foreground window (application name + window title) at regular intervals. Each interval is assigned a category based on keyword matching."/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Grid.Row="0" Margin="12,0,0,10">
+                                <TextBlock Text="Idle Detection" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="#374151" Margin="0,0,0,4"/>
+                                <TextBlock Style="{StaticResource LabelText}"
+                                    Text="The system monitors the time since the last keyboard keystroke or mouse movement. When no input is detected beyond the idle threshold, the session is marked as Idle and excluded from scoring."/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,12,0">
+                                <TextBlock Text="Screenshot Capture" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="#374151" Margin="0,0,0,4"/>
+                                <TextBlock Style="{StaticResource LabelText}"
+                                    Text="Screenshots are captured at a configurable interval (default: every 5 minutes during active sessions) for accountability and review. Privacy blur can be applied in Settings."/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Grid.Row="1" Margin="12,0,0,0">
+                                <TextBlock Text="Categorisation Priority" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="#374151" Margin="0,0,0,4"/>
+                                <TextBlock Style="{StaticResource LabelText}"
+                                    Text="Custom rules created by your administrator are checked first and always take priority. Built-in rules apply when no custom rule matches. Unmatched applications default to Neutral."/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 4. Built-in App Classifications ────────────────────────── -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Text="4 — Built-in App Classifications" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Style="{StaticResource BodyText}" Margin="0,0,0,12"
+                            Text="EAMAS ships with a default set of keyword rules. Any application whose process name or window title contains one of these keywords is automatically classified."/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Productive column -->
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <Border Background="#F0FDF4" BorderBrush="#BBF7D0"
+                                        BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,6">
+                                    <TextBlock Text="Productive Applications"
+                                               FontWeight="Bold" FontSize="11" Foreground="#15803D"/>
+                                </Border>
+
+                                <TextBlock Text="Development &amp; Code Editors" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#6B7280" Margin="0,4,0,4"/>
+                                <WrapPanel>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="VS Code" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Visual Studio" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Rider" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="IntelliJ IDEA" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="PyCharm" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="WebStorm" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="CLion" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Android Studio" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Notepad++" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Sublime Text" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Atom" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Eclipse" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="NetBeans" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <TextBlock Text="Microsoft Office &amp; Productivity" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#6B7280" Margin="0,8,0,4"/>
+                                <WrapPanel>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Excel" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Word" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="PowerPoint" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="OneNote" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Outlook" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <TextBlock Text="Communication &amp; Collaboration" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#6B7280" Margin="0,8,0,4"/>
+                                <WrapPanel>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Teams" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Slack" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Zoom" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <TextBlock Text="Dev Tools, Terminal &amp; Design" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#6B7280" Margin="0,8,0,4"/>
+                                <WrapPanel>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Postman" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Insomnia" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="DBeaver" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="SSMS" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="CMD" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="PowerShell" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Windows Terminal" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Git" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="GitHub Desktop" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="SourceTree" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Figma" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Adobe Apps" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                    <Border Background="#DCFCE7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Blender" FontSize="10" Foreground="#166534"/>
+                                    </Border>
+                                </WrapPanel>
+                            </StackPanel>
+
+                            <!-- Distracting + Neutral column -->
+                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                <Border Background="#FEF2F2" BorderBrush="#FECACA"
+                                        BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,6">
+                                    <TextBlock Text="Distracting Applications"
+                                               FontWeight="Bold" FontSize="11" Foreground="#B91C1C"/>
+                                </Border>
+
+                                <TextBlock Text="Video Streaming" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#6B7280" Margin="0,4,0,4"/>
+                                <WrapPanel>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="YouTube" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Netflix" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Amazon Prime" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Disney+" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Twitch" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="VLC" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <TextBlock Text="Social Media" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#6B7280" Margin="0,8,0,4"/>
+                                <WrapPanel>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="TikTok" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Instagram" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Facebook" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Twitter / X" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Reddit" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <TextBlock Text="Gaming" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#6B7280" Margin="0,8,0,4"/>
+                                <WrapPanel>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Steam" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Epic Games" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="League of Legends" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                    <Border Background="#FEE2E2" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Valorant" FontSize="10" Foreground="#991B1B"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <!-- Neutral -->
+                                <Border Background="#FFFBEB" BorderBrush="#FDE68A"
+                                        BorderThickness="1" CornerRadius="6" Padding="10,8"
+                                        Margin="0,16,0,6">
+                                    <TextBlock Text="Neutral Applications (examples)"
+                                               FontWeight="Bold" FontSize="11" Foreground="#B45309"/>
+                                </Border>
+                                <WrapPanel>
+                                    <Border Background="#FEF3C7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Spotify" FontSize="10" Foreground="#92400E"/>
+                                    </Border>
+                                    <Border Background="#FEF3C7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="File Explorer" FontSize="10" Foreground="#92400E"/>
+                                    </Border>
+                                    <Border Background="#FEF3C7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Calculator" FontSize="10" Foreground="#92400E"/>
+                                    </Border>
+                                    <Border Background="#FEF3C7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Notepad" FontSize="10" Foreground="#92400E"/>
+                                    </Border>
+                                    <Border Background="#FEF3C7" CornerRadius="3" Margin="0,2,4,2" Padding="6,2">
+                                        <TextBlock Text="Any unrecognised app" FontSize="10" Foreground="#92400E"/>
+                                    </Border>
+                                </WrapPanel>
+
+                                <TextBlock Margin="0,10,0,0" Style="{StaticResource LabelText}"
+                                    Text="Your administrator can add custom rules in Settings → App Categories to override or extend these defaults."/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── 5. Active Time vs Total Session ─────────────────────────── -->
+                <Border Style="{StaticResource SectionCard}" Margin="0,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="5 — Active Time vs Total Session Time" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                <TextBlock Text="Active Time" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="#374151" Margin="0,0,0,4"/>
+                                <TextBlock Style="{StaticResource LabelText}"
+                                    Text="Keyboard or mouse input was detected. This is the denominator for the productivity score and the basis of all percentage calculations in reports."/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="12,0,12,0">
+                                <TextBlock Text="Idle Time" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="#374151" Margin="0,0,0,4"/>
+                                <TextBlock Style="{StaticResource LabelText}"
+                                    Text="No keyboard or mouse input for the configured threshold (default 5 min). Idle time is tracked separately and excluded from the productivity score denominator."/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="12,0,0,0">
+                                <TextBlock Text="Total Session" FontWeight="SemiBold"
+                                           FontSize="11" Foreground="#374151" Margin="0,0,0,4"/>
+                                <TextBlock Style="{StaticResource LabelText}"
+                                    Text="Active Time + Idle Time combined. This represents the full span between the first and last recorded event in a day."/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer close button -->
+        <Border Grid.Row="2" Background="#F1F5F9" BorderBrush="#E2E8F0"
+                BorderThickness="0,1,0,0" Padding="24,12">
+            <Button Content="Close" Width="100" HorizontalAlignment="Right"
+                    Click="CloseButton_Click"
+                    Background="#1E40AF" Foreground="White"
+                    BorderThickness="0" Padding="0,8"
+                    FontSize="13" FontWeight="SemiBold" Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#1E40AF"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Padding" Value="0,8"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#1D4ED8"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Border>
+    </Grid>
+</Window>

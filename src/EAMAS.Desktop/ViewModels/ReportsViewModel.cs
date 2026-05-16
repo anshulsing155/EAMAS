@@ -15,6 +15,7 @@ namespace EAMAS.Desktop.ViewModels
         public string Date            { get; set; } = string.Empty;
         public string ActiveTime      { get; set; } = string.Empty;
         public string IdleTime        { get; set; } = string.Empty;
+        public string BreakTime       { get; set; } = string.Empty;
         public string ProductiveTime  { get; set; } = string.Empty;
         public string DistractingTime { get; set; } = string.Empty;
         public int    Score           { get; set; }
@@ -38,6 +39,7 @@ namespace EAMAS.Desktop.ViewModels
         private string _totalActiveTime = "—";
         private string _totalProductiveTime = "—";
         private string _totalIdleTime   = "—";
+        private string _totalBreakTime  = "—";
         private int    _totalScreenshots;
         private int    _alertCount;
         private List<User>  _users        = new();
@@ -50,6 +52,7 @@ namespace EAMAS.Desktop.ViewModels
         private string _distractingPct  = "0%";
         private string _neutralPct      = "0%";
         private string _idlePct         = "0%";
+        private string _breakPct        = "0%";
 
         // The last-built bundle (used by export commands)
         private ReportBundle? _lastBundle;
@@ -66,6 +69,7 @@ namespace EAMAS.Desktop.ViewModels
         public string TotalActiveTime   { get => _totalActiveTime;  set => Set(ref _totalActiveTime, value); }
         public string TotalProductiveTime{ get => _totalProductiveTime; set => Set(ref _totalProductiveTime, value); }
         public string TotalIdleTime     { get => _totalIdleTime;    set => Set(ref _totalIdleTime, value); }
+        public string TotalBreakTime    { get => _totalBreakTime;   set => Set(ref _totalBreakTime, value); }
         public int    TotalScreenshots  { get => _totalScreenshots; set => Set(ref _totalScreenshots, value); }
         public int    AlertCount        { get => _alertCount;       set => Set(ref _alertCount, value); }
         public List<User> Users         { get => _users;            set => Set(ref _users, value); }
@@ -77,6 +81,7 @@ namespace EAMAS.Desktop.ViewModels
         public string DistractingPct { get => _distractingPct; set => Set(ref _distractingPct, value); }
         public string NeutralPct     { get => _neutralPct;     set => Set(ref _neutralPct, value); }
         public string IdlePct        { get => _idlePct;        set => Set(ref _idlePct, value); }
+        public string BreakPct       { get => _breakPct;       set => Set(ref _breakPct, value); }
 
         public bool IsAdmin   => App.CurrentUser?.Role is UserRole.Admin or UserRole.SuperAdmin;
         public bool IsManager => App.CurrentUser?.Role is UserRole.Manager or UserRole.Admin or UserRole.SuperAdmin;
@@ -136,6 +141,7 @@ namespace EAMAS.Desktop.ViewModels
                 // ── Aggregates ────────────────────────────────────────────────
                 var totalActive     = TimeSpan.FromTicks(summaries.Sum(s => s.ActiveTime.Ticks));
                 var totalIdle       = TimeSpan.FromTicks(summaries.Sum(s => s.IdleTime.Ticks));
+                var totalBreak      = TimeSpan.FromTicks(summaries.Sum(s => s.BreakTime.Ticks));
                 var totalProductive = TimeSpan.FromTicks(summaries.Sum(s => s.ProductiveTime.Ticks));
                 var totalDistracting= TimeSpan.FromTicks(summaries.Sum(s => s.DistractingTime.Ticks));
                 var totalShots      = summaries.Sum(s => s.ScreenshotCount);
@@ -143,14 +149,15 @@ namespace EAMAS.Desktop.ViewModels
                 var avgScore        = scored.Any() ? (int)scored.Average(s => s.ProductivityScore) : 0;
 
                 // ── Category percentages ──────────────────────────────────────
-                var totalTimeTicks = totalActive.Ticks + totalIdle.Ticks;
+                var totalTimeTicks = totalActive.Ticks + totalIdle.Ticks + totalBreak.Ticks;
                 if (totalTimeTicks == 0) totalTimeTicks = 1;
                 string CatPct(ActivityCategory cat)
                 {
                     catTotals.TryGetValue(cat, out var ts);
                     return $"{(double)ts.Ticks / totalTimeTicks * 100:F0}%";
                 }
-                var idlePct = $"{(double)totalIdle.Ticks / totalTimeTicks * 100:F0}%";
+                var idlePct  = $"{(double)totalIdle.Ticks  / totalTimeTicks * 100:F0}%";
+                var breakPct = $"{(double)totalBreak.Ticks / totalTimeTicks * 100:F0}%";
 
                 // ── Grid rows ─────────────────────────────────────────────────
                 var rows = summaries.Select(s => new DailySummaryRow
@@ -158,6 +165,7 @@ namespace EAMAS.Desktop.ViewModels
                     Date            = s.Date.ToString("ddd, MMM d"),
                     ActiveTime      = FormatTime(s.ActiveTime),
                     IdleTime        = FormatTime(s.IdleTime),
+                    BreakTime       = FormatTime(s.BreakTime),
                     ProductiveTime  = FormatTime(s.ProductiveTime),
                     DistractingTime = FormatTime(s.DistractingTime),
                     Score           = s.ProductivityScore,
@@ -207,6 +215,7 @@ namespace EAMAS.Desktop.ViewModels
                     AuditLogs          = auditLogs,
                     TotalActive        = totalActive,
                     TotalIdle          = totalIdle,
+                    TotalBreakTime     = totalBreak,
                     TotalProductive    = totalProductive,
                     TotalDistracting   = totalDistracting,
                     AvgScore           = avgScore,
@@ -221,6 +230,7 @@ namespace EAMAS.Desktop.ViewModels
                     TotalActiveTime  = FormatTime(totalActive);
                     TotalProductiveTime = FormatTime(totalProductive);
                     TotalIdleTime    = FormatTime(totalIdle);
+                    TotalBreakTime   = FormatTime(totalBreak);
                     TotalScreenshots = totalShots;
                     AlertCount       = alerts.Count;
                     AvgScore         = avgScore;
@@ -229,6 +239,7 @@ namespace EAMAS.Desktop.ViewModels
                     DistractingPct   = CatPct(ActivityCategory.Distracting);
                     NeutralPct       = CatPct(ActivityCategory.Neutral);
                     IdlePct          = idlePct;
+                    BreakPct         = breakPct;
                     _lastBundle      = bundle;
                     IsLoading        = false;
                 });
@@ -248,10 +259,10 @@ namespace EAMAS.Desktop.ViewModels
             if (dlg.ShowDialog() != true) return;
 
             var sb = new StringBuilder();
-            sb.AppendLine("Date,Active Time,Idle Time,Productive Time,Distracting Time," +
+            sb.AppendLine("Date,Active Time,Idle Time,Break Time (Screen Lock),Productive Time,Distracting Time," +
                           "Score,Screenshots,Top App");
             foreach (var row in Rows)
-                sb.AppendLine($"\"{row.Date}\",{row.ActiveTime},{row.IdleTime}," +
+                sb.AppendLine($"\"{row.Date}\",{row.ActiveTime},{row.IdleTime},{row.BreakTime}," +
                               $"{row.ProductiveTime},{row.DistractingTime}," +
                               $"{row.Score},{row.Screenshots},\"{row.TopApp}\"");
 
@@ -261,13 +272,15 @@ namespace EAMAS.Desktop.ViewModels
                 sb.AppendLine();
                 sb.AppendLine("CATEGORY SUMMARY");
                 sb.AppendLine("Category,Total Time,Percentage");
-                var totalTicks = (_lastBundle.TotalActive + _lastBundle.TotalIdle).Ticks;
+                var totalTicks = (_lastBundle.TotalActive + _lastBundle.TotalIdle + _lastBundle.TotalBreakTime).Ticks;
                 if (totalTicks == 0) totalTicks = 1;
                 foreach (var kv in _lastBundle.CategoryTotals)
                     sb.AppendLine($"{kv.Key},{ExportService.FormatTime(kv.Value)}," +
                                   $"{(double)kv.Value.Ticks / totalTicks * 100:F1}%");
                 sb.AppendLine($"Idle,{ExportService.FormatTime(_lastBundle.TotalIdle)}," +
                               $"{(double)_lastBundle.TotalIdle.Ticks / totalTicks * 100:F1}%");
+                sb.AppendLine($"Break (Screen Lock),{ExportService.FormatTime(_lastBundle.TotalBreakTime)}," +
+                              $"{(double)_lastBundle.TotalBreakTime.Ticks / totalTicks * 100:F1}%");
 
                 // App usage block
                 sb.AppendLine();

@@ -37,6 +37,7 @@ namespace EAMAS.Desktop.Services
         // Derived totals (computed once in ViewModel)
         public TimeSpan TotalActive      { get; set; }
         public TimeSpan TotalIdle        { get; set; }
+        public TimeSpan TotalBreakTime   { get; set; }
         public TimeSpan TotalProductive  { get; set; }
         public TimeSpan TotalDistracting { get; set; }
         public int      AvgScore         { get; set; }
@@ -121,6 +122,7 @@ namespace EAMAS.Desktop.Services
 
             Kpi("Total Active Time",        FormatTime(r.TotalActive));
             Kpi("Total Idle Time",          FormatTime(r.TotalIdle));
+            Kpi("Total Break Time",         FormatTime(r.TotalBreakTime));
             Kpi("Total Productive Time",    FormatTime(r.TotalProductive));
             Kpi("Total Distracting Time",   FormatTime(r.TotalDistracting));
             Kpi("Average Productivity Score", $"{r.AvgScore}%");
@@ -142,7 +144,7 @@ namespace EAMAS.Desktop.Services
 
             var headers = new[]
             {
-                "DATE", "DAY", "ACTIVE TIME", "IDLE TIME",
+                "DATE", "DAY", "ACTIVE TIME", "IDLE TIME", "BREAK TIME (SCREEN LOCK)",
                 "PRODUCTIVE", "DISTRACTING", "NEUTRAL",
                 "SCORE", "SCREENSHOTS", "TOP APP"
             };
@@ -157,15 +159,16 @@ namespace EAMAS.Desktop.Services
                 ws.Cell(row, 2).Value  = s.Date.ToString("dddd");
                 ws.Cell(row, 3).Value  = FormatTime(s.ActiveTime);
                 ws.Cell(row, 4).Value  = FormatTime(s.IdleTime);
-                ws.Cell(row, 5).Value  = FormatTime(s.ProductiveTime);
-                ws.Cell(row, 6).Value  = FormatTime(s.DistractingTime);
-                ws.Cell(row, 7).Value  = FormatTime(neutral);
-                ws.Cell(row, 8).Value  = s.ProductivityScore;
-                ws.Cell(row, 9).Value  = s.ScreenshotCount;
-                ws.Cell(row, 10).Value = s.TopApps.FirstOrDefault().App ?? "—";
+                ws.Cell(row, 5).Value  = FormatTime(s.BreakTime);
+                ws.Cell(row, 6).Value  = FormatTime(s.ProductiveTime);
+                ws.Cell(row, 7).Value  = FormatTime(s.DistractingTime);
+                ws.Cell(row, 8).Value  = FormatTime(neutral);
+                ws.Cell(row, 9).Value  = s.ProductivityScore;
+                ws.Cell(row, 10).Value = s.ScreenshotCount;
+                ws.Cell(row, 11).Value = s.TopApps.FirstOrDefault().App ?? "—";
 
                 // Score cell color
-                var scoreCell = ws.Cell(row, 8);
+                var scoreCell = ws.Cell(row, 9);
                 scoreCell.Style.Font.Bold = true;
                 scoreCell.Style.Font.FontColor = s.ProductivityScore >= 70
                     ? XLColor.FromHtml("#16A34A")
@@ -173,11 +176,11 @@ namespace EAMAS.Desktop.Services
                         ? XLColor.FromHtml("#D97706")
                         : XLColor.FromHtml("#DC2626");
 
-                AlternateRow(ws, row, 10);
+                AlternateRow(ws, row, 11);
                 row++;
             }
 
-            AutofitColumns(ws, 10);
+            AutofitColumns(ws, 11);
         }
 
         private static void AddAppUsageSheet(XLWorkbook wb, ReportBundle r)
@@ -256,11 +259,17 @@ namespace EAMAS.Desktop.Services
                 row++;
             }
 
-            // Also add idle
+            // Also add idle and break
             ws.Cell(row, 1).Value = "Idle";
             ws.Cell(row, 2).Value = FormatTime(r.TotalIdle);
             ws.Cell(row, 3).Value = "—";
             ws.Cell(row, 4).Value = "No keyboard/mouse input detected";
+            AlternateRow(ws, row, 4);
+            row++;
+            ws.Cell(row, 1).Value = "Break (Screen Lock)";
+            ws.Cell(row, 2).Value = FormatTime(r.TotalBreakTime);
+            ws.Cell(row, 3).Value = "—";
+            ws.Cell(row, 4).Value = "PC screen was locked (counted as break time)";
             AlternateRow(ws, row, 4);
 
             AutofitColumns(ws, 4);
@@ -672,14 +681,15 @@ namespace EAMAS.Desktop.Services
 
                     var scoreColor = r.AvgScore >= 70 ? "#16A34A" : r.AvgScore >= 40 ? "#D97706" : "#DC2626";
 
-                    Kpi("TOTAL ACTIVE TIME",      FormatTime(r.TotalActive));
-                    Kpi("AVG PRODUCTIVITY SCORE", $"{r.AvgScore}%", scoreColor);
-                    Kpi("TOTAL PRODUCTIVE TIME",  FormatTime(r.TotalProductive));
-                    Kpi("TOTAL DISTRACTING TIME", FormatTime(r.TotalDistracting));
-                    Kpi("TOTAL IDLE TIME",        FormatTime(r.TotalIdle));
-                    Kpi("TOTAL SCREENSHOTS",      r.TotalScreenshots.ToString());
-                    Kpi("ACTIVE DAYS",            r.DailySummaries.Count(s => s.ActiveTime.TotalMinutes >= 5).ToString());
-                    Kpi("ALERTS FIRED",           r.Alerts.Count.ToString());
+                    Kpi("TOTAL ACTIVE TIME",        FormatTime(r.TotalActive));
+                    Kpi("AVG PRODUCTIVITY SCORE",   $"{r.AvgScore}%", scoreColor);
+                    Kpi("TOTAL PRODUCTIVE TIME",    FormatTime(r.TotalProductive));
+                    Kpi("TOTAL DISTRACTING TIME",   FormatTime(r.TotalDistracting));
+                    Kpi("TOTAL IDLE TIME",          FormatTime(r.TotalIdle));
+                    Kpi("BREAK TIME (SCREEN LOCK)", FormatTime(r.TotalBreakTime));
+                    Kpi("TOTAL SCREENSHOTS",        r.TotalScreenshots.ToString());
+                    Kpi("ACTIVE DAYS",              r.DailySummaries.Count(s => s.ActiveTime.TotalMinutes >= 5).ToString());
+                    Kpi("ALERTS FIRED",             r.Alerts.Count.ToString());
                 });
             });
         }
@@ -694,15 +704,16 @@ namespace EAMAS.Desktop.Services
                     t.ColumnsDefinition(cd =>
                     {
                         cd.RelativeColumn(2.2f);
-                        cd.RelativeColumn(1.6f);
                         cd.RelativeColumn(1.4f);
-                        cd.RelativeColumn(1.6f);
-                        cd.RelativeColumn(1.6f);
+                        cd.RelativeColumn(1.2f);
+                        cd.RelativeColumn(1.4f);
+                        cd.RelativeColumn(1.4f);
+                        cd.RelativeColumn(1.4f);
                         cd.RelativeColumn(1);
                         cd.RelativeColumn(1);
                     });
 
-                    PdfTableHeader(t, new[] { "DATE", "ACTIVE", "IDLE", "PRODUCTIVE", "DISTRACTING", "SCORE", "SHOTS" });
+                    PdfTableHeader(t, new[] { "DATE", "ACTIVE", "IDLE", "BREAK", "PRODUCTIVE", "DISTRACTING", "SCORE", "SHOTS" });
 
                     bool alt = false;
                     foreach (var s in r.DailySummaries)
@@ -715,6 +726,7 @@ namespace EAMAS.Desktop.Services
                         PdfCell(t, s.Date.ToString("ddd, MMM d"), bg);
                         PdfCell(t, FormatTime(s.ActiveTime), bg);
                         PdfCell(t, FormatTime(s.IdleTime), bg);
+                        PdfCell(t, FormatTime(s.BreakTime), bg);
                         PdfCell(t, FormatTime(s.ProductiveTime), bg);
                         PdfCell(t, FormatTime(s.DistractingTime), bg);
                         t.Cell().Background(bg).Padding(5).AlignCenter()
@@ -814,6 +826,13 @@ namespace EAMAS.Desktop.Services
                     PdfCell(t, FormatTime(r.TotalIdle), idleBg);
                     PdfCell(t, "—", idleBg, center: true);
                     PdfCell(t, "No keyboard/mouse input detected", idleBg);
+                    alt = !alt;
+                    // Break (screen lock) row
+                    var breakBg = alt ? "#F8FAFC" : "#FFFFFF";
+                    PdfCell(t, "Break (Screen Lock)", breakBg);
+                    PdfCell(t, FormatTime(r.TotalBreakTime), breakBg);
+                    PdfCell(t, "—", breakBg, center: true);
+                    PdfCell(t, "PC screen was locked (counted as break)", breakBg);
                 });
             });
         }

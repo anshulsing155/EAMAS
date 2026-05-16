@@ -30,6 +30,7 @@ namespace EAMAS.Desktop.Services
         private string _lastTitle   = string.Empty;
         private DateTime _sessionStart = DateTime.MinValue;
         private bool _wasIdle = false;
+        private volatile bool _isScreenLocked = false;
 
         // Cached today's productivity score (refreshed every 5 minutes)
         private int _cachedProductivityScore;
@@ -52,6 +53,8 @@ namespace EAMAS.Desktop.Services
             _alertService = alertService;
             _settingsService = settingsService;
             _privacyService = privacyService;
+
+            Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
         }
 
         /// <summary>Start monitoring for the given user. Not called for SuperAdmin.</summary>
@@ -73,7 +76,36 @@ namespace EAMAS.Desktop.Services
             if (!_isRunning) return;
             _isRunning = false;
             _cts?.Cancel();
-            FlushCurrentSession(DateTime.UtcNow);
+            var now = DateTime.UtcNow;
+            if (_isScreenLocked && _sessionStart != DateTime.MinValue)
+                FlushSession(_lastProcess, _lastTitle, _sessionStart, now, isIdle: false, isScreenLocked: true);
+            else
+                FlushCurrentSession(now);
+        }
+
+        private void OnSessionSwitch(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
+        {
+            if (!_isRunning) return;
+            var now = DateTime.UtcNow;
+
+            if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLock && !_isScreenLocked)
+            {
+                FlushCurrentSession(now);
+                _isScreenLocked = true;
+                _sessionStart   = now;
+                _lastProcess    = "ScreenLock";
+                _lastTitle      = "Screen Locked";
+                _wasIdle        = false;
+            }
+            else if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock && _isScreenLocked)
+            {
+                FlushSession(_lastProcess, _lastTitle, _sessionStart, now, isIdle: false, isScreenLocked: true);
+                _isScreenLocked = false;
+                _sessionStart   = DateTime.MinValue;
+                _lastProcess    = string.Empty;
+                _lastTitle      = string.Empty;
+                _lastWindow     = IntPtr.Zero;
+            }
         }
 
         /// <summary>Trigger an immediate manual screenshot capture.</summary>
@@ -106,6 +138,8 @@ namespace EAMAS.Desktop.Services
 
         private void PollActivity(SystemSettings settings)
         {
+            if (_isScreenLocked) return;
+
             var idleTime = WindowsApiService.GetIdleTime();
             var isIdle   = idleTime.TotalSeconds >= settings.IdleThresholdSeconds;
             var now      = DateTime.UtcNow;
@@ -140,7 +174,7 @@ namespace EAMAS.Desktop.Services
 
             if (_wasIdle)
             {
-                FlushSession(_lastProcess, _lastTitle, _sessionStart, now, isIdle: true);
+                FlushSession(_lastProcess, _lastTitle, _sessionStart, now, isIdle: true, isScreenLocked: false);
                 _wasIdle      = false;
                 _sessionStart = now;
                 _lastProcess  = process;
@@ -181,11 +215,11 @@ namespace EAMAS.Desktop.Services
         private void FlushCurrentSession(DateTime end)
         {
             if (_sessionStart == DateTime.MinValue || string.IsNullOrEmpty(_lastProcess)) return;
-            FlushSession(_lastProcess, _lastTitle, _sessionStart, end, _wasIdle);
+            FlushSession(_lastProcess, _lastTitle, _sessionStart, end, _wasIdle, isScreenLocked: false);
             _sessionStart = DateTime.MinValue;
         }
 
-        private void FlushSession(string process, string title, DateTime start, DateTime end, bool isIdle)
+        private void FlushSession(string process, string title, DateTime start, DateTime end, bool isIdle, bool isScreenLocked)
         {
             if (end <= start || (end - start).TotalSeconds < 2) return;
 
@@ -196,9 +230,10 @@ namespace EAMAS.Desktop.Services
                 StartTime       = start,
                 EndTime         = end,
                 ProcessName     = process,
-                ApplicationName = FormatAppName(process),
+                ApplicationName = isScreenLocked ? "Screen Lock" : FormatAppName(process),
                 WindowTitle     = title,
-                IsIdle          = isIdle
+                IsIdle          = isIdle,
+                IsScreenLocked  = isScreenLocked
             };
 
             _activityService.RecordActivity(log);
@@ -443,6 +478,7 @@ namespace EAMAS.Desktop.Services
 
         public void Dispose()
         {
+            Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
             Stop();
             _cts?.Dispose();
         }

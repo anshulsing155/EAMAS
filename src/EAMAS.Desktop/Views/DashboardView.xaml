@@ -37,33 +37,43 @@
             </Border>
 
             <!-- KPI Row -->
-            <UniformGrid Rows="1" Columns="4" Margin="0,0,0,20">
+            <UniformGrid Rows="1" Columns="5" Margin="0,0,0,20">
                 <!-- Active Time -->
-                <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                <Border Style="{StaticResource Card}" Margin="0,0,6,0">
                     <StackPanel>
                         <TextBlock Text="ACTIVE TIME TODAY" FontSize="10" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding ActiveTimeLabel}" FontSize="26" FontWeight="Bold"
+                        <TextBlock Text="{Binding ActiveTimeLabel}" FontSize="24" FontWeight="Bold"
                                    Foreground="{StaticResource TextPrimaryBrush}"/>
                         <TextBlock Text="Hours worked" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>
                 <!-- Idle Time -->
-                <Border Style="{StaticResource Card}" Margin="4,0,4,0">
+                <Border Style="{StaticResource Card}" Margin="3,0,3,0">
                     <StackPanel>
                         <TextBlock Text="IDLE TIME TODAY" FontSize="10" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding IdleTimeLabel}" FontSize="26" FontWeight="Bold"
+                        <TextBlock Text="{Binding IdleTimeLabel}" FontSize="24" FontWeight="Bold"
                                    Foreground="{StaticResource WarningBrush}"/>
                         <TextBlock Text="Detected idle" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>
+                <!-- Break Time (Screen Lock) -->
+                <Border Style="{StaticResource Card}" Margin="3,0,3,0">
+                    <StackPanel>
+                        <TextBlock Text="BREAK TIME TODAY" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding BreakTimeLabel}" FontSize="24" FontWeight="Bold"
+                                   Foreground="#8B5CF6"/>
+                        <TextBlock Text="Screen locked" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
                 <!-- Productivity Score -->
-                <Border Style="{StaticResource Card}" Margin="4,0,4,0">
+                <Border Style="{StaticResource Card}" Margin="3,0,3,0">
                     <StackPanel>
                         <TextBlock Text="PRODUCTIVITY SCORE" FontSize="10" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                        <TextBlock FontSize="26" FontWeight="Bold"
+                        <TextBlock FontSize="24" FontWeight="Bold"
                                    Foreground="{Binding ProductivityScore, Converter={StaticResource ScoreColor}}">
                             <Run Text="{Binding ProductivityScore, Mode=OneWay}"/>
                             <Run Text="%"/>
@@ -75,11 +85,11 @@
                     </StackPanel>
                 </Border>
                 <!-- Screenshots -->
-                <Border Style="{StaticResource Card}" Margin="8,0,0,0">
+                <Border Style="{StaticResource Card}" Margin="6,0,0,0">
                     <StackPanel>
                         <TextBlock Text="SCREENSHOTS TODAY" FontSize="10" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{Binding ScreenshotCount}" FontSize="26" FontWeight="Bold"
+                        <TextBlock Text="{Binding ScreenshotCount}" FontSize="24" FontWeight="Bold"
                                    Foreground="{StaticResource TextPrimaryBrush}"/>
                         <TextBlock Text="Captured" Style="{StaticResource SecondaryText}" Margin="0,4,0,0"/>
                     </StackPanel>

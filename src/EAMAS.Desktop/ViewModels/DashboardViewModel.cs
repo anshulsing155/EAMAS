@@ -37,6 +37,7 @@ namespace EAMAS.Desktop.ViewModels
 
         private string _activeTimeLabel = "—";
         private string _idleTimeLabel = "—";
+        private string _breakTimeLabel = "—";
         private int _productivityScore;
         private int _screenshotCount;
         private int _unreadAlerts;
@@ -49,6 +50,7 @@ namespace EAMAS.Desktop.ViewModels
 
         public string ActiveTimeLabel { get => _activeTimeLabel; set => Set(ref _activeTimeLabel, value); }
         public string IdleTimeLabel { get => _idleTimeLabel; set => Set(ref _idleTimeLabel, value); }
+        public string BreakTimeLabel { get => _breakTimeLabel; set => Set(ref _breakTimeLabel, value); }
         public int ProductivityScore { get => _productivityScore; set => Set(ref _productivityScore, value); }
         public int ScreenshotCount { get => _screenshotCount; set => Set(ref _screenshotCount, value); }
         public int UnreadAlerts { get => _unreadAlerts; set => Set(ref _unreadAlerts, value); }
@@ -126,6 +128,7 @@ namespace EAMAS.Desktop.ViewModels
                 HeaderSubtitle = App.CurrentOrganization?.Name ?? string.Empty;
                 ActiveTimeLabel = FormatTime(summary.ActiveTime);
                 IdleTimeLabel = FormatTime(summary.IdleTime);
+                BreakTimeLabel = FormatTime(summary.BreakTime);
                 ProductivityScore = summary.ProductivityScore;
                 ScreenshotCount = summary.ScreenshotCount;
                 UnreadAlerts = alerts;
@@ -249,8 +252,8 @@ namespace EAMAS.Desktop.ViewModels
 
         private void BuildCategoryChart(DailySummary summary)
         {
-            var total = summary.ActiveTime.TotalMinutes;
-            if (total < 1) total = 1;
+            var totalMins = (summary.ActiveTime + summary.BreakTime).TotalMinutes;
+            if (totalMins < 1) totalMins = 1;
             var neutral = summary.ActiveTime - summary.ProductiveTime - summary.DistractingTime;
             if (neutral < TimeSpan.Zero) neutral = TimeSpan.Zero;
 
@@ -258,13 +261,16 @@ namespace EAMAS.Desktop.ViewModels
             {
                 new() { Label = "Productive", Value = summary.ProductiveTime.TotalMinutes,
                     Color = "#16A34A", ValueLabel = FormatTime(summary.ProductiveTime),
-                    BarHeightPercent = summary.ProductiveTime.TotalMinutes / total * 100 },
+                    BarHeightPercent = summary.ProductiveTime.TotalMinutes / totalMins * 100 },
                 new() { Label = "Neutral", Value = neutral.TotalMinutes,
                     Color = "#3B82F6", ValueLabel = FormatTime(neutral),
-                    BarHeightPercent = neutral.TotalMinutes / total * 100 },
+                    BarHeightPercent = neutral.TotalMinutes / totalMins * 100 },
                 new() { Label = "Distracting", Value = summary.DistractingTime.TotalMinutes,
                     Color = "#EF4444", ValueLabel = FormatTime(summary.DistractingTime),
-                    BarHeightPercent = summary.DistractingTime.TotalMinutes / total * 100 },
+                    BarHeightPercent = summary.DistractingTime.TotalMinutes / totalMins * 100 },
+                new() { Label = "Break", Value = summary.BreakTime.TotalMinutes,
+                    Color = "#8B5CF6", ValueLabel = FormatTime(summary.BreakTime),
+                    BarHeightPercent = summary.BreakTime.TotalMinutes / totalMins * 100 },
             };
         }
 

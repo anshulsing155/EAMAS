@@ -9,6 +9,7 @@ namespace EAMAS.Core.Services
         DateTime Date,
         TimeSpan ActiveTime,
         TimeSpan IdleTime,
+        TimeSpan BreakTime,
         TimeSpan ProductiveTime,
         TimeSpan DistractingTime,
         int ProductivityScore,
@@ -53,13 +54,14 @@ namespace EAMAS.Core.Services
                            x.StartTime < end)
                 .ToList();
 
-            var activeTime = TimeSpan.FromTicks(logs.Where(x => !x.IsIdle).Sum(x => x.Duration.Ticks));
-            var idleTime = TimeSpan.FromTicks(logs.Where(x => x.IsIdle).Sum(x => x.Duration.Ticks));
+            var activeTime = TimeSpan.FromTicks(logs.Where(x => !x.IsIdle && !x.IsScreenLocked).Sum(x => x.Duration.Ticks));
+            var idleTime = TimeSpan.FromTicks(logs.Where(x => x.IsIdle && !x.IsScreenLocked).Sum(x => x.Duration.Ticks));
+            var breakTime = TimeSpan.FromTicks(logs.Where(x => x.IsScreenLocked).Sum(x => x.Duration.Ticks));
             var productiveTime = TimeSpan.FromTicks(logs
-                .Where(x => !x.IsIdle && x.Category == ActivityCategory.Productive)
+                .Where(x => !x.IsIdle && !x.IsScreenLocked && x.Category == ActivityCategory.Productive)
                 .Sum(x => x.Duration.Ticks));
             var distractingTime = TimeSpan.FromTicks(logs
-                .Where(x => !x.IsIdle && x.Category == ActivityCategory.Distracting)
+                .Where(x => !x.IsIdle && !x.IsScreenLocked && x.Category == ActivityCategory.Distracting)
                 .Sum(x => x.Duration.Ticks));
 
             var screenshotCount = (int)_db.ScreenshotRecords.CountDocuments(x =>
@@ -79,7 +81,7 @@ namespace EAMAS.Core.Services
                 .ToList();
 
             var score = CalculateProductivityScore(activeTime, productiveTime, distractingTime);
-            return new DailySummary(date, activeTime, idleTime, productiveTime,
+            return new DailySummary(date, activeTime, idleTime, breakTime, productiveTime,
                 distractingTime, score, screenshotCount, topApps);
         }
 
@@ -129,6 +131,7 @@ namespace EAMAS.Core.Services
                 .Find(x => x.OrganizationId == orgId &&
                            x.UserId == userId &&
                            !x.IsIdle &&
+                           !x.IsScreenLocked &&
                            x.StartTime >= from &&
                            x.StartTime < to)
                 .ToList();

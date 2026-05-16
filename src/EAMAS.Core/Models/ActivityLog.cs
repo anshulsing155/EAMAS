@@ -23,6 +23,7 @@ namespace EAMAS.Core.Models
         public string WindowTitle { get; set; } = string.Empty;
         public ActivityCategory Category { get; set; }
         public bool IsIdle { get; set; }
+        public bool IsScreenLocked { get; set; }
 
         [BsonIgnore]
         public TimeSpan Duration => EndTime > StartTime ? EndTime - StartTime : TimeSpan.Zero;

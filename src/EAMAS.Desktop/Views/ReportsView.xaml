@@ -210,6 +210,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Productive" FontSize="11" Foreground="#16A34A"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ProductivePct}"  FontSize="11" FontWeight="SemiBold" Foreground="#16A34A"/>
@@ -219,6 +220,8 @@
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DistractingPct}" FontSize="11" FontWeight="SemiBold" Foreground="#DC2626" Margin="0,2,0,0"/>
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="Idle"        FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
                             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding IdlePct}"        FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Break"       FontSize="11" Foreground="#8B5CF6" Margin="0,2,0,0"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding BreakPct}"       FontSize="11" FontWeight="SemiBold" Foreground="#8B5CF6" Margin="0,2,0,0"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -272,10 +275,11 @@
                               ItemsSource="{Binding Rows}" MaxHeight="380">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="DATE"        Binding="{Binding Date}"            Width="120"/>
-                            <DataGridTextColumn Header="ACTIVE TIME" Binding="{Binding ActiveTime}"      Width="100"/>
-                            <DataGridTextColumn Header="IDLE TIME"   Binding="{Binding IdleTime}"        Width="90"/>
-                            <DataGridTextColumn Header="PRODUCTIVE"  Binding="{Binding ProductiveTime}"  Width="100"/>
-                            <DataGridTextColumn Header="DISTRACTING" Binding="{Binding DistractingTime}" Width="100"/>
+                            <DataGridTextColumn Header="ACTIVE TIME" Binding="{Binding ActiveTime}"      Width="90"/>
+                            <DataGridTextColumn Header="IDLE TIME"   Binding="{Binding IdleTime}"        Width="80"/>
+                            <DataGridTextColumn Header="BREAK TIME"  Binding="{Binding BreakTime}"       Width="90"/>
+                            <DataGridTextColumn Header="PRODUCTIVE"  Binding="{Binding ProductiveTime}"  Width="90"/>
+                            <DataGridTextColumn Header="DISTRACTING" Binding="{Binding DistractingTime}" Width="90"/>
                             <DataGridTemplateColumn Header="SCORE" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
