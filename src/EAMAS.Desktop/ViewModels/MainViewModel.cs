@@ -54,6 +54,10 @@ namespace EAMAS.Desktop.ViewModels
         // SuperAdmin manages users through the Organisations page instead.
         public bool ShowEmployeesNav => CurrentUser?.Role == UserRole.Admin;
 
+        // AI Engineering Manager features — not available to SuperAdmin (system-only scope)
+        public bool ShowTasksNav    => CurrentUser?.Role != UserRole.SuperAdmin;
+        public bool ShowProjectsNav => CurrentUser?.Role is UserRole.Manager or UserRole.Admin;
+
         /// <summary>True when monitoring is active (i.e., the user is not SuperAdmin).</summary>
         public bool IsMonitoring => !IsSuperAdmin;
 
@@ -66,6 +70,9 @@ namespace EAMAS.Desktop.ViewModels
         public RelayCommand NavigateActivityCommand { get; }
         public RelayCommand NavigateScreenshotsCommand { get; }
         public RelayCommand NavigateReportsCommand { get; }
+        public RelayCommand NavigateTasksCommand { get; }
+        public RelayCommand NavigateProjectsCommand { get; }
+        public RelayCommand NavigateSprintPlannerCommand { get; }
         public RelayCommand NavigateEmployeesCommand { get; }
         public RelayCommand NavigateAlertsCommand { get; }
         public RelayCommand NavigateOrganizationsCommand { get; }
@@ -85,6 +92,9 @@ namespace EAMAS.Desktop.ViewModels
             NavigateActivityCommand = new RelayCommand(() => Navigate(AppPage.ActivityLogs));
             NavigateScreenshotsCommand = new RelayCommand(() => Navigate(AppPage.Screenshots));
             NavigateReportsCommand = new RelayCommand(() => Navigate(AppPage.Reports));
+            NavigateTasksCommand = new RelayCommand(() => Navigate(AppPage.Tasks));
+            NavigateProjectsCommand = new RelayCommand(() => Navigate(AppPage.Projects));
+            NavigateSprintPlannerCommand = new RelayCommand(() => Navigate(AppPage.SprintPlanner));
             NavigateEmployeesCommand = new RelayCommand(() => Navigate(AppPage.Employees));
             NavigateAlertsCommand = new RelayCommand(() => Navigate(AppPage.Alerts));
             NavigateOrganizationsCommand = new RelayCommand(() => Navigate(AppPage.Organizations));

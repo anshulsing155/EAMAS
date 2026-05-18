@@ -28,7 +28,8 @@ namespace EAMAS.Core.Data
                 throw new ArgumentException("MongoDB connection string must be supplied either via constructor or the DATABASE_URL environment variable.");
 
             var settings = MongoClientSettings.FromConnectionString(connectionString);
-            settings.ServerSelectionTimeout = TimeSpan.FromSeconds(60);
+            // 10 s is enough to detect an unreachable host without blocking the UI thread for a minute.
+            settings.ServerSelectionTimeout = TimeSpan.FromSeconds(10);
             settings.ConnectTimeout = TimeSpan.FromSeconds(10);
             settings.SslSettings ??= new SslSettings();
             settings.SslSettings.EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
@@ -75,6 +76,28 @@ namespace EAMAS.Core.Data
 
         /// <summary>GridFS bucket for full-resolution screenshot images.</summary>
         public IGridFSBucket ScreenshotBucket => _screenshotBucket;
+
+        // ── AI Engineering Manager Collections ───────────────────────────────────
+        public IMongoCollection<Project> Projects =>
+            _db.GetCollection<Project>("projects");
+
+        public IMongoCollection<ProjectTask> Tasks =>
+            _db.GetCollection<ProjectTask>("tasks");
+
+        public IMongoCollection<Sprint> Sprints =>
+            _db.GetCollection<Sprint>("sprints");
+
+        public IMongoCollection<CodeReview> CodeReviews =>
+            _db.GetCollection<CodeReview>("code_reviews");
+
+        public IMongoCollection<QaResult> QaResults =>
+            _db.GetCollection<QaResult>("qa_results");
+
+        public IMongoCollection<StandupLog> StandupLogs =>
+            _db.GetCollection<StandupLog>("standup_logs");
+
+        public IMongoCollection<ProjectEmbedding> ProjectEmbeddings =>
+            _db.GetCollection<ProjectEmbedding>("project_embeddings");
 
         // ── Index creation ───────────────────────────────────────────────────────
         private async Task EnsureIndexesAsync(CancellationToken cancellationToken = default)
@@ -132,6 +155,72 @@ namespace EAMAS.Core.Data
                     .Ascending(x => x.OrganizationId)
                     .Descending(x => x.Timestamp),
                 new CreateIndexOptions { Background = true })).ConfigureAwait(false);
+
+            // ── AI Engineering Manager indexes ────────────────────────────────────
+            await Projects.Indexes.CreateOneAsync(new CreateIndexModel<Project>(
+                Builders<Project>.IndexKeys.Ascending(x => x.OrganizationId),
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
+
+            await Tasks.Indexes.CreateManyAsync(new[]
+            {
+                new CreateIndexModel<ProjectTask>(
+                    Builders<ProjectTask>.IndexKeys
+                        .Ascending(x => x.OrganizationId)
+                        .Ascending(x => x.ProjectId)
+                        .Ascending(x => x.Status),
+                    new CreateIndexOptions { Background = true }),
+                new CreateIndexModel<ProjectTask>(
+                    Builders<ProjectTask>.IndexKeys
+                        .Ascending(x => x.OrganizationId)
+                        .Ascending(x => x.AssignedToUserId)
+                        .Ascending(x => x.Status),
+                    new CreateIndexOptions { Background = true }),
+                new CreateIndexModel<ProjectTask>(
+                    Builders<ProjectTask>.IndexKeys
+                        .Ascending(x => x.ProjectId)
+                        .Ascending(x => x.SprintId),
+                    new CreateIndexOptions { Background = true })
+            }).ConfigureAwait(false);
+
+            await Sprints.Indexes.CreateOneAsync(new CreateIndexModel<Sprint>(
+                Builders<Sprint>.IndexKeys
+                    .Ascending(x => x.ProjectId)
+                    .Descending(x => x.StartDate),
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
+
+            await CodeReviews.Indexes.CreateManyAsync(new[]
+            {
+                new CreateIndexModel<CodeReview>(
+                    Builders<CodeReview>.IndexKeys
+                        .Ascending(x => x.ProjectId)
+                        .Ascending(x => x.CommitSha),
+                    new CreateIndexOptions { Unique = true, Background = true }),
+                new CreateIndexModel<CodeReview>(
+                    Builders<CodeReview>.IndexKeys
+                        .Ascending(x => x.TaskId),
+                    new CreateIndexOptions { Background = true })
+            }).ConfigureAwait(false);
+
+            await StandupLogs.Indexes.CreateOneAsync(new CreateIndexModel<StandupLog>(
+                Builders<StandupLog>.IndexKeys
+                    .Ascending(x => x.OrganizationId)
+                    .Ascending(x => x.UserId)
+                    .Descending(x => x.Date),
+                new CreateIndexOptions { Background = true })).ConfigureAwait(false);
+
+            await ProjectEmbeddings.Indexes.CreateManyAsync(new[]
+            {
+                new CreateIndexModel<ProjectEmbedding>(
+                    Builders<ProjectEmbedding>.IndexKeys
+                        .Ascending(x => x.ProjectId)
+                        .Ascending(x => x.ChunkType),
+                    new CreateIndexOptions { Background = true }),
+                new CreateIndexModel<ProjectEmbedding>(
+                    Builders<ProjectEmbedding>.IndexKeys
+                        .Ascending(x => x.ProjectId)
+                        .Ascending(x => x.SourcePath),
+                    new CreateIndexOptions { Background = true })
+            }).ConfigureAwait(false);
         }
 
         private async Task EnsureIndexesWithRetryAsync(TimeSpan initialDelay, int maxAttempts = 5)

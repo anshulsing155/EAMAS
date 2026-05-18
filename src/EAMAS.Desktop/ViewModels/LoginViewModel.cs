@@ -152,6 +152,9 @@ namespace EAMAS.Desktop.ViewModels
 
                     if (result == System.Windows.MessageBoxResult.No)
                     {
+                        // Close the session token we just opened so it doesn't stay orphaned
+                        _userService.CloseSession(user.Id, sessionToken);
+                        App.CurrentSessionToken = null;
                         ErrorMessage = "Monitoring consent is required to proceed.";
                         App.CurrentUser = null;
                         App.CurrentOrganization = null;
@@ -159,6 +162,19 @@ namespace EAMAS.Desktop.ViewModels
                     }
 
                     _userService.SetConsent(user.Id, true);
+                }
+
+                // ── Forced password change ───────────────────────────
+                if (user.MustChangePassword)
+                {
+                    var pwdMsg = "Your account was created with a temporary password.\n" +
+                                 "You must set a new password before continuing.";
+                    System.Windows.MessageBox.Show(pwdMsg, "Password Change Required",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                    // Navigate to settings for password change instead of the dashboard.
+                    // The MainWindow will open but the password-change dialog is shown first.
+                    // (SettingsView enforces the change and clears MustChangePassword on success.)
                 }
 
                 var mainWindow = App.Services.GetService(typeof(MainWindow)) as MainWindow;
@@ -172,6 +188,11 @@ namespace EAMAS.Desktop.ViewModels
 
                 // Check for software updates in background (fire-and-forget)
                 App.CheckForUpdatesAsync();
+
+                // Start GitHub polling for AI-driven code review
+                if (App.Services.GetService(typeof(EAMAS.Core.Services.GitHubPollingService))
+                    is EAMAS.Core.Services.GitHubPollingService poller)
+                    poller.Start();
 
                 System.Windows.Application.Current.Windows
                     .OfType<LoginWindow>().FirstOrDefault()?.Close();

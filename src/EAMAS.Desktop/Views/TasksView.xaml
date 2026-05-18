@@ -1,0 +1,379 @@
+<UserControl x:Class="EAMAS.Desktop.Views.TasksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:EAMAS.Desktop.Converters"
+             xmlns:ctrl="clr-namespace:EAMAS.Desktop.Controls"
+             Background="{StaticResource ContentBgBrush}">
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolVisInv" Invert="True"/>
+        <conv:IntToVisibilityConverter  x:Key="IntVis"/>
+        <conv:StatusMessageColorConverter x:Key="StatusMsgColor"/>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <!-- ── Top Toolbar ──────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Top" Background="#0F172A" Padding="14,10"
+                BorderBrush="#1E293B" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="16"/>
+                    <!-- Search bar fills remaining space -->
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Project selector -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Project:" Foreground="#64748B" FontSize="12"
+                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox ItemsSource="{Binding Projects}"
+                              SelectedItem="{Binding SelectedProject}"
+                              DisplayMemberPath="Name" Width="190"
+                              Style="{StaticResource ModernComboBox}"/>
+                </StackPanel>
+
+                <!-- Active sprint pill -->
+                <Border Grid.Column="2" Background="#1E3A5F" CornerRadius="6" Padding="10,4"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding ActiveSprint, Converter={StaticResource BoolVis}}">
+                    <TextBlock Foreground="#60A5FA" FontSize="12">
+                        <Run Text="&#x25B6;  "/>
+                        <Run Text="{Binding ActiveSprint.Name}"/>
+                        <Run Text=" — "/>
+                        <Run Text="{Binding ActiveSprint.Goal}"/>
+                    </TextBlock>
+                </Border>
+
+                <!-- Search bar -->
+                <Border Grid.Column="4" Background="#1E293B" CornerRadius="6"
+                        BorderBrush="#334155" BorderThickness="1" VerticalAlignment="Center">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="13" Foreground="#475569" Margin="10,0,6,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="Transparent" BorderThickness="0" Foreground="White"
+                                 FontSize="13" CaretBrush="White" Padding="0,7"
+                                 VerticalAlignment="Center">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="TextBox">
+                                                <Grid>
+                                                    <TextBlock Text="Search tasks, assignees…"
+                                                               Foreground="#475569" FontSize="13"
+                                                               VerticalAlignment="Center" Margin="2,0"
+                                                               IsHitTestVisible="False">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding SearchText}" Value="">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <ScrollViewer x:Name="PART_ContentHost" Margin="0"/>
+                                                </Grid>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <!-- Clear button — only visible when search is active -->
+                        <Button Grid.Column="2" Content="✕" Width="28" Height="28"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="#475569" FontSize="12" Cursor="Hand"
+                                Command="{Binding ClearSearchCommand}"
+                                Visibility="{Binding SearchText, Converter={StaticResource BoolVis}}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Right actions -->
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
+                            Command="{Binding ToggleStandupsCommand}"
+                            Visibility="{Binding IsManager, Converter={StaticResource BoolVis}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7EF;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Standups" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="&#x21BB; Refresh" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding RefreshCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ── Dynamic Status Bar ───────────────────────────────────── -->
+        <Border DockPanel.Dock="Top" Padding="14,7"
+                Background="{Binding StatusMessage, Converter={StaticResource StatusMsgColor}}"
+                Visibility="{Binding StatusMessage, Converter={StaticResource BoolVis}}">
+            <Grid>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="White" FontSize="12"/>
+                <ProgressBar IsIndeterminate="True" Height="2" VerticalAlignment="Bottom"
+                             Foreground="#60A5FA" Background="Transparent"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolVis}}"/>
+            </Grid>
+        </Border>
+
+        <!-- ── Today's Standup Panel (collapsible, manager only) ────── -->
+        <Border DockPanel.Dock="Top" Background="#0F172A"
+                BorderBrush="#1E293B" BorderThickness="0,0,0,1"
+                Visibility="{Binding ShowStandups, Converter={StaticResource BoolVis}}">
+            <DockPanel Margin="16,10">
+                <TextBlock DockPanel.Dock="Top" Text="Today's Standups"
+                           FontSize="13" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                              MaxHeight="120">
+                    <Grid>
+                    <!-- Empty state -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Top"
+                                Visibility="{Binding TodayStandups.Count, Converter={StaticResource BoolVisInv}}">
+                        <TextBlock Text="No standups generated yet. Click " Foreground="#475569" FontSize="12"/>
+                        <TextBlock Text="Standups" Foreground="#60A5FA" FontSize="12"/>
+                        <TextBlock Text=" to generate." Foreground="#475569" FontSize="12"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding TodayStandups}"
+                                  Visibility="{Binding TodayStandups.Count, Converter={StaticResource IntVis}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1E293B" CornerRadius="8" Padding="12,8"
+                                        Margin="0,0,10,0" MinWidth="220" MaxWidth="280">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding UserName}" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="#60A5FA" Margin="0,0,0,4"/>
+                                        <TextBlock FontSize="11" Foreground="#CBD5E1" TextWrapping="Wrap"
+                                                   MaxHeight="60" TextTrimming="CharacterEllipsis">
+                                            <Run Text="Done: " Foreground="#64748B"/>
+                                            <Run Text="{Binding YesterdayDone}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="11" Foreground="#CBD5E1" TextWrapping="Wrap"
+                                                   MaxHeight="40" TextTrimming="CharacterEllipsis">
+                                            <Run Text="Today: " Foreground="#64748B"/>
+                                            <Run Text="{Binding TodayPlan}"/>
+                                        </TextBlock>
+                                        <TextBlock FontSize="11" Foreground="#FCA5A5" TextWrapping="Wrap"
+                                                   MaxHeight="32" TextTrimming="CharacterEllipsis"
+                                                   Visibility="{Binding Blockers, Converter={StaticResource BoolVis}}">
+                                            <Run Text="&#x26A0; " Foreground="#EF4444"/>
+                                            <Run Text="{Binding Blockers}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </Grid>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- ── Main: Kanban + Detail Panel ──────────────────────────── -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Kanban Board -->
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Margin="16,16,16,0">
+
+                    <ctrl:KanbanColumn Title="Backlog" Count="{Binding Backlog.Count}"
+                                       Items="{Binding Backlog}" ViewModel="{Binding}"
+                                       ColumnStatus="Backlog" Margin="0,0,10,0"/>
+                    <ctrl:KanbanColumn Title="To Do" Count="{Binding Todo.Count}"
+                                       Items="{Binding Todo}" ViewModel="{Binding}"
+                                       ColumnStatus="Todo" Margin="0,0,10,0"/>
+                    <ctrl:KanbanColumn Title="In Progress" Count="{Binding InProgress.Count}"
+                                       Items="{Binding InProgress}" ViewModel="{Binding}"
+                                       ColumnStatus="InProgress" Margin="0,0,10,0"/>
+                    <ctrl:KanbanColumn Title="Code Review" Count="{Binding CodeReviewCol.Count}"
+                                       Items="{Binding CodeReviewCol}" ViewModel="{Binding}"
+                                       ColumnStatus="CodeReview" Margin="0,0,10,0"/>
+                    <ctrl:KanbanColumn Title="QA Testing" Count="{Binding QATesting.Count}"
+                                       Items="{Binding QATesting}" ViewModel="{Binding}"
+                                       ColumnStatus="QATesting" Margin="0,0,10,0"/>
+                    <ctrl:KanbanColumn Title="Needs Fix" Count="{Binding NeedsFix.Count}"
+                                       Items="{Binding NeedsFix}" ViewModel="{Binding}"
+                                       ColumnStatus="NeedsFix" IsWarning="True" Margin="0,0,10,0"/>
+                    <ctrl:KanbanColumn Title="Done" Count="{Binding Done.Count}"
+                                       Items="{Binding Done}" ViewModel="{Binding}"
+                                       ColumnStatus="Done"/>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Task Detail Flyout -->
+            <Border Grid.Column="1" Width="380" Background="#0F172A"
+                    BorderBrush="#1E293B" BorderThickness="1,0,0,0"
+                    Visibility="{Binding SelectedTask, Converter={StaticResource BoolVis}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20,16">
+                        <!-- Header -->
+                        <Grid Margin="0,0,0,12">
+                            <TextBlock Text="Task Detail" FontSize="15" FontWeight="Bold" Foreground="White"/>
+                            <Button Content="✕" HorizontalAlignment="Right"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="#64748B" FontSize="16" Cursor="Hand"
+                                    Command="{Binding OpenTaskDetailCommand}"
+                                    CommandParameter="{x:Null}"/>
+                        </Grid>
+
+                        <!-- Status Badge -->
+                        <Border CornerRadius="6" Padding="10,5" Margin="0,0,0,10" HorizontalAlignment="Left">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#1E293B"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTask.Status}" Value="Done">
+                                            <Setter Property="Background" Value="#14532D"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedTask.Status}" Value="InProgress">
+                                            <Setter Property="Background" Value="#1E3A5F"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedTask.Status}" Value="NeedsFix">
+                                            <Setter Property="Background" Value="#7F1D1D"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Foreground="#94A3B8" FontSize="12"
+                                       Text="{Binding SelectedTask.Status, StringFormat='Status: {0}'}"/>
+                        </Border>
+
+                        <!-- Title -->
+                        <TextBlock Text="{Binding SelectedTask.Title}" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="White" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- Meta row -->
+                        <Border Background="#1E293B" CornerRadius="6" Padding="10,8" Margin="0,0,0,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Assignee" Foreground="#64748B" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding TeamMembers}"
+                                              SelectedItem="{Binding SelectedTaskAssignee}"
+                                              DisplayMemberPath="FullName"
+                                              Style="{StaticResource ModernComboBox}"
+                                              Height="26" FontSize="12" Margin="0,0,8,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Estimated" Foreground="#64748B" FontSize="10" FontWeight="SemiBold"/>
+                                    <TextBlock Foreground="#CBD5E1" FontSize="12" Margin="0,2,0,0"
+                                               Text="{Binding SelectedTask.EstimatedHours, StringFormat='{}{0:0.#} hrs'}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Priority chip -->
+                        <Border HorizontalAlignment="Left" CornerRadius="4" Padding="8,3" Margin="0,0,0,12">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#1E293B"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTask.Priority}" Value="Critical">
+                                            <Setter Property="Background" Value="#7F1D1D"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedTask.Priority}" Value="High">
+                                            <Setter Property="Background" Value="#78350F"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedTask.Priority}" Value="Medium">
+                                            <Setter Property="Background" Value="#1E3A5F"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding SelectedTask.Priority, StringFormat='Priority: {0}'}"
+                                       Foreground="#CBD5E1" FontSize="11"/>
+                        </Border>
+
+                        <!-- Description -->
+                        <TextBlock Text="Description" Foreground="#64748B" FontSize="11"
+                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SelectedTask.Description}"
+                                   Foreground="#CBD5E1" FontSize="12"
+                                   TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                        <!-- Acceptance Criteria -->
+                        <TextBlock Text="Acceptance Criteria" Foreground="#64748B" FontSize="11"
+                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding SelectedTask.AcceptanceCriteria}"
+                                   Foreground="#CBD5E1" FontSize="12"
+                                   TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                        <!-- Sub-Tasks -->
+                        <TextBlock Text="Sub-Tasks" Foreground="#64748B" FontSize="11"
+                                   FontWeight="SemiBold" Margin="0,0,0,8"
+                                   Visibility="{Binding SelectedTask.SubTasks.Count, Converter={StaticResource IntVis}}"/>
+                        <ItemsControl ItemsSource="{Binding SelectedTask.SubTasks}"
+                                      Visibility="{Binding SelectedTask.SubTasks.Count, Converter={StaticResource IntVis}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="☐ " Foreground="#64748B" FontSize="12"/>
+                                        <TextBlock Text="{Binding}" Foreground="#CBD5E1" FontSize="12" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Commit link -->
+                        <Border Background="#1E293B" CornerRadius="6" Padding="10,6" Margin="0,14,0,0"
+                                Visibility="{Binding SelectedTask.RelatedCommitSha, Converter={StaticResource BoolVis}}">
+                            <TextBlock Foreground="#60A5FA" FontSize="11">
+                                <Run Text="&#xE8A5;  " FontFamily="Segoe MDL2 Assets"/>
+                                <Run Text="Latest commit: "/>
+                                <Run Text="{Binding SelectedTask.RelatedCommitSha}"/>
+                            </TextBlock>
+                        </Border>
+
+                        <!-- Actions -->
+                        <Separator Background="#1E293B" Margin="0,16"/>
+                        <Button Content="Assign to Me" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding AssignToMeCommand}"
+                                CommandParameter="{Binding SelectedTask}"
+                                HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                        <Button Content="Move Forward  →" Style="{StaticResource PrimaryButton}"
+                                Command="{Binding MoveForwardCommand}"
+                                CommandParameter="{Binding SelectedTask}"
+                                HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                        <Button Content="←  Move Back" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding MoveBackCommand}"
+                                CommandParameter="{Binding SelectedTask}"
+                                HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                        <Button Content="Delete Task" Style="{StaticResource DangerButton}"
+                                Command="{Binding DeleteTaskCommand}"
+                                CommandParameter="{Binding SelectedTask}"
+                                HorizontalAlignment="Stretch"
+                                Visibility="{Binding IsManager, Converter={StaticResource BoolVis}}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

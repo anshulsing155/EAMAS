@@ -25,6 +25,12 @@ namespace EAMAS.Core.Models
         public bool IsIdle { get; set; }
         public bool IsScreenLocked { get; set; }
 
+        /// <summary>True when the session duration was clamped by the time-integrity check.</summary>
+        public bool WasClockAdjusted { get; set; }
+
+        /// <summary>The original EndTime before clock-integrity clamping. Null if no adjustment was made.</summary>
+        public DateTime? OriginalEndTime { get; set; }
+
         [BsonIgnore]
         public TimeSpan Duration => EndTime > StartTime ? EndTime - StartTime : TimeSpan.Zero;
     }

@@ -1,5 +1,6 @@
-﻿{
-    "version":  "1.2.0",
-    "downloadUrl":  "https://github.com/anshulsing155/EAMAS/releases/download/v1.2.0/EAMAS-Setup-1.2.0.exe",
-    "releaseNotes":  "Fix PDF export crash: QuestPDF single-child container violation — AlignCenter() was called after Text() had already claimed the container slot. Fixed by chaining AlignCenter() before Text() in PdfCell."
+{
+  "version": "1.2.2",
+  "downloadUrl": "https://raw.githubusercontent.com/anshulsing155/EAMAS-updates/main/EAMAS.exe",
+  "releaseNotes": "Security Audit Patches:\n- Fixed session token cleanup\n- Patched database race conditions\n- Added assignment of tasks to all employees\n- AI Sprint Retrospectives now visible in Sprint History\n- Replaced weak machine encryption keys\n- Added SHA256 integrity checks for future updates",
+  "sha256": "06EE96FAD14A3FFEA128A07D89A9338CF1E03212B016728D4C9CB625DA4379B2"
 }

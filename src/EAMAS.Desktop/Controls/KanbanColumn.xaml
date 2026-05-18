@@ -1,0 +1,104 @@
+<UserControl x:Class="EAMAS.Desktop.Controls.KanbanColumn"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:EAMAS.Desktop.Converters"
+             xmlns:ctrl="clr-namespace:EAMAS.Desktop.Controls"
+             x:Name="Root" Width="250">
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolVis"/>
+        <conv:BoolToVisibilityConverter x:Key="IntVisInv" Invert="True"/>
+        <conv:IntToVisibilityConverter  x:Key="IntVis"/>
+    </UserControl.Resources>
+
+    <!-- Full-height column with sticky header and scrollable body -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ── Sticky Column Header ──────────────────────────────── -->
+        <Border Grid.Row="0" CornerRadius="10,10,0,0" Padding="12,10">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="#1E293B"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsWarning, ElementName=Root}" Value="True">
+                            <Setter Property="Background" Value="#7F1D1D"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Accent dot -->
+                    <Ellipse Width="7" Height="7" Margin="0,0,7,0" VerticalAlignment="Center">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#3B82F6"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsWarning, ElementName=Root}" Value="True">
+                                        <Setter Property="Fill" Value="#FCA5A5"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ColumnStatus, ElementName=Root}" Value="Done">
+                                        <Setter Property="Fill" Value="#22C55E"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ColumnStatus, ElementName=Root}" Value="InProgress">
+                                        <Setter Property="Fill" Value="#F59E0B"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Text="{Binding Title, ElementName=Root}"
+                               FontSize="12" FontWeight="SemiBold" Foreground="White"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <!-- Task count badge -->
+                <Border HorizontalAlignment="Right" VerticalAlignment="Center"
+                        CornerRadius="10" Padding="8,2">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#334155"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsWarning, ElementName=Root}" Value="True">
+                                    <Setter Property="Background" Value="#991B1B"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding Count, ElementName=Root}"
+                               FontSize="11" FontWeight="Bold" Foreground="#94A3B8"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ── Scrollable Card List ──────────────────────────────── -->
+        <Border Grid.Row="1" Background="#0F172A" CornerRadius="0,0,10,10" Padding="8,8,8,12">
+            <Grid>
+                <!-- Empty state (shown when no tasks) -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding Count, ElementName=Root, Converter={StaticResource IntVisInv}}"
+                            Margin="8,20">
+                    <TextBlock Text="&#xE8C9;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                               Foreground="#1E293B" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <TextBlock Text="No tasks" Style="{StaticResource EmptyStateText}"/>
+                </StackPanel>
+
+                <!-- Task cards -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding Count, ElementName=Root, Converter={StaticResource IntVis}}">
+                    <ItemsControl ItemsSource="{Binding Items, ElementName=Root}"
+                                  DataContext="{Binding ViewModel, ElementName=Root}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ctrl:TaskCardItem Task="{Binding}"
+                                                  ViewModel="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

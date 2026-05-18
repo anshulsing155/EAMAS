@@ -44,5 +44,12 @@ namespace EAMAS.Core.Models
         public int FailedLoginAttempts { get; set; }
         /// <summary>Account locked until this UTC time; null if not locked.</summary>
         public DateTime? LockedUntil { get; set; }
+
+        // ── Forced password change ────────────────────────────────────
+        /// <summary>
+        /// When true the user must change their password before accessing the dashboard.
+        /// Set for accounts seeded with an auto-generated temporary password.
+        /// </summary>
+        public bool MustChangePassword { get; set; }
     }
 }

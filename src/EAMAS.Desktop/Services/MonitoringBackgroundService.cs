@@ -1,6 +1,7 @@
 using EAMAS.Core.Enums;
 using EAMAS.Core.Models;
 using EAMAS.Core.Services;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -14,6 +15,7 @@ namespace EAMAS.Desktop.Services
         private readonly AlertService _alertService;
         private readonly SettingsService _settingsService;
         private readonly ScreenshotPrivacyService _privacyService;
+        private readonly TimeIntegrityService _timeIntegrity;
 
         private CancellationTokenSource? _cts;
         private Task? _activityTask;
@@ -29,8 +31,13 @@ namespace EAMAS.Desktop.Services
         private string _lastProcess = string.Empty;
         private string _lastTitle   = string.Empty;
         private DateTime _sessionStart = DateTime.MinValue;
+        private TimeSpan _sessionMonotonicStart;  // Stopwatch snapshot at session start
         private bool _wasIdle = false;
         private volatile bool _isScreenLocked = false;
+
+        // Clock-jump detection state
+        private int _clockJumpCount;
+        private DateTime _lastClockJumpAlert = DateTime.MinValue;
 
         // Cached today's productivity score (refreshed every 5 minutes)
         private int _cachedProductivityScore;
@@ -46,13 +53,15 @@ namespace EAMAS.Desktop.Services
             ScreenshotService screenshotService,
             AlertService alertService,
             SettingsService settingsService,
-            ScreenshotPrivacyService privacyService)
+            ScreenshotPrivacyService privacyService,
+            TimeIntegrityService timeIntegrity)
         {
             _activityService = activityService;
             _screenshotService = screenshotService;
             _alertService = alertService;
             _settingsService = settingsService;
             _privacyService = privacyService;
+            _timeIntegrity = timeIntegrity;
 
             Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
         }
@@ -76,7 +85,7 @@ namespace EAMAS.Desktop.Services
             if (!_isRunning) return;
             _isRunning = false;
             _cts?.Cancel();
-            var now = DateTime.UtcNow;
+            var now = _timeIntegrity.GetTrustedUtcNow();
             if (_isScreenLocked && _sessionStart != DateTime.MinValue)
                 FlushSession(_lastProcess, _lastTitle, _sessionStart, now, isIdle: false, isScreenLocked: true);
             else
@@ -86,13 +95,14 @@ namespace EAMAS.Desktop.Services
         private void OnSessionSwitch(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
         {
             if (!_isRunning) return;
-            var now = DateTime.UtcNow;
+            var now = _timeIntegrity.GetTrustedUtcNow();
 
             if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLock && !_isScreenLocked)
             {
                 FlushCurrentSession(now);
                 _isScreenLocked = true;
                 _sessionStart   = now;
+                _sessionMonotonicStart = _timeIntegrity.GetMonotonicSnapshot();
                 _lastProcess    = "ScreenLock";
                 _lastTitle      = "Screen Locked";
                 _wasIdle        = false;
@@ -132,7 +142,13 @@ namespace EAMAS.Desktop.Services
                     await Task.Delay(pollMs, ct).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException) { return; }
-                catch { await Task.Delay(2000, ct).ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    // Log the exception so real bugs are visible; then back off briefly.
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[MonitoringBackgroundService] ActivityLoop error: {ex.GetType().Name}: {ex.Message}");
+                    await Task.Delay(2000, ct).ConfigureAwait(false);
+                }
             }
         }
 
@@ -142,7 +158,31 @@ namespace EAMAS.Desktop.Services
 
             var idleTime = WindowsApiService.GetIdleTime();
             var isIdle   = idleTime.TotalSeconds >= settings.IdleThresholdSeconds;
-            var now      = DateTime.UtcNow;
+            var now      = _timeIntegrity.GetTrustedUtcNow();
+
+            // ── Clock-manipulation detection ─────────────────────────────────────
+            var clockJump = _timeIntegrity.DetectClockJump();
+            if (clockJump.HasValue)
+            {
+                _clockJumpCount++;
+                Debug.WriteLine($"[TimeIntegrity] Clock jump detected: {clockJump.Value.TotalSeconds:F1}s (count: {_clockJumpCount})");
+
+                // Fire a ClockManipulation alert (at most once per hour)
+                if ((now - _lastClockJumpAlert).TotalHours >= 1)
+                {
+                    var direction = clockJump.Value > TimeSpan.Zero ? "forward" : "backward";
+                    _alertService.CreateAlert(_currentOrgId, _currentUserId,
+                        AlertType.ClockManipulation,
+                        $"System clock jumped {direction} by {clockJump.Value.Duration().TotalMinutes:F1} minutes. " +
+                        $"Activity session durations have been automatically corrected.");
+                    _lastClockJumpAlert = now;
+                }
+
+                // Discard the current session — its timestamps are now unreliable.
+                // Reset session start to the trusted "now" so the next session is clean.
+                _sessionStart = now;
+                _sessionMonotonicStart = _timeIntegrity.GetMonotonicSnapshot();
+            }
 
             if (isIdle)
             {
@@ -151,6 +191,7 @@ namespace EAMAS.Desktop.Services
                     FlushCurrentSession(now);
                     _wasIdle      = true;
                     _sessionStart = now - idleTime;
+                    _sessionMonotonicStart = _timeIntegrity.GetMonotonicSnapshot() - idleTime;
                     _lastProcess  = "Idle";
                     _lastTitle    = "System Idle";
                 }
@@ -177,6 +218,7 @@ namespace EAMAS.Desktop.Services
                 FlushSession(_lastProcess, _lastTitle, _sessionStart, now, isIdle: true, isScreenLocked: false);
                 _wasIdle      = false;
                 _sessionStart = now;
+                _sessionMonotonicStart = _timeIntegrity.GetMonotonicSnapshot();
                 _lastProcess  = process;
                 _lastTitle    = title;
                 _lastWindow   = hWnd;
@@ -194,6 +236,7 @@ namespace EAMAS.Desktop.Services
             _lastProcess = process;
             _lastTitle   = title;
             _sessionStart = now;
+            _sessionMonotonicStart = _timeIntegrity.GetMonotonicSnapshot();
 
             ActivityChanged?.Invoke(FormatAppName(process), title);
 
@@ -223,17 +266,25 @@ namespace EAMAS.Desktop.Services
         {
             if (end <= start || (end - start).TotalSeconds < 2) return;
 
+            // ── Validate duration against monotonic clock ────────────────────────
+            var (validStart, validEnd, wasAdjusted) = _timeIntegrity.ValidateSessionDuration(
+                start, end, _sessionMonotonicStart);
+
+            if (validEnd <= validStart || (validEnd - validStart).TotalSeconds < 2) return;
+
             var log = new ActivityLog
             {
-                OrganizationId  = _currentOrgId,
-                UserId          = _currentUserId,
-                StartTime       = start,
-                EndTime         = end,
-                ProcessName     = process,
-                ApplicationName = isScreenLocked ? "Screen Lock" : FormatAppName(process),
-                WindowTitle     = title,
-                IsIdle          = isIdle,
-                IsScreenLocked  = isScreenLocked
+                OrganizationId   = _currentOrgId,
+                UserId           = _currentUserId,
+                StartTime        = validStart,
+                EndTime          = validEnd,
+                ProcessName      = process,
+                ApplicationName  = isScreenLocked ? "Screen Lock" : FormatAppName(process),
+                WindowTitle      = title,
+                IsIdle           = isIdle,
+                IsScreenLocked   = isScreenLocked,
+                WasClockAdjusted = wasAdjusted,
+                OriginalEndTime  = wasAdjusted ? end : null
             };
 
             _activityService.RecordActivity(log);
@@ -372,7 +423,7 @@ namespace EAMAS.Desktop.Services
             {
                 OrganizationId   = _currentOrgId,
                 UserId           = _currentUserId,
-                TakenAt          = DateTime.UtcNow,
+                TakenAt          = _timeIntegrity.GetTrustedUtcNow(),   // tamper-resistant timestamp
                 ApplicationName  = currentApp,
                 IsManual         = isManual,
                 IsPrivacyBlurred = isPrivacyBlurred,

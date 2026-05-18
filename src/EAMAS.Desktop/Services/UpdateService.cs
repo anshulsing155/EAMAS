@@ -10,6 +10,11 @@ namespace EAMAS.Desktop.Services
         public string Version { get; set; } = string.Empty;
         public string DownloadUrl { get; set; } = string.Empty;
         public string ReleaseNotes { get; set; } = string.Empty;
+        /// <summary>
+        /// Optional SHA-256 hex digest of the installer file.
+        /// When present, the downloaded file is verified before execution.
+        /// </summary>
+        public string? Sha256 { get; set; }
     }
 
     public class UpdateService
@@ -61,10 +66,11 @@ namespace EAMAS.Desktop.Services
         }
 
         /// <summary>
-        /// Downloads the installer at <paramref name="downloadUrl"/> into %TEMP%,
-        /// then launches it and exits the current application.
+        /// Downloads the installer described by <paramref name="update"/> into %TEMP%,
+        /// verifies its SHA-256 hash (if present in the manifest), then launches it
+        /// and exits the current application.
         /// </summary>
-        public async Task DownloadAndInstallAsync(string downloadUrl,
+        public async Task DownloadAndInstallAsync(UpdateInfo update,
             IProgress<int>? progress = null)
         {
             var dest = Path.Combine(Path.GetTempPath(), "EAMAS-Update-Setup.exe");
@@ -74,7 +80,7 @@ namespace EAMAS.Desktop.Services
                 try { File.Delete(dest); } catch { /* already gone or locked — overwrite below */ }
 
             using var response = await _downloadHttp.GetAsync(
-                downloadUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                update.DownloadUrl, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var total      = response.Content.Headers.ContentLength ?? -1L;
@@ -95,6 +101,38 @@ namespace EAMAS.Desktop.Services
                         progress?.Report((int)(downloaded * 100 / total));
                 }
             } // file and src are fully closed here
+
+            // ── Integrity verification ─────────────────────────────────────────
+            // Only proceed if the manifest supplied a hash.  Missing hash is tolerated
+            // for backwards compatibility but logged as a warning.
+            if (!string.IsNullOrWhiteSpace(update.Sha256))
+            {
+                var expectedHash = update.Sha256.Trim().ToLowerInvariant();
+                string actualHash;
+                await using (var verifyStream = File.OpenRead(dest))
+                {
+                    var hashBytes = await System.Security.Cryptography.SHA256.HashDataAsync(verifyStream)
+                        .ConfigureAwait(false);
+                    actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+                }
+
+                if (actualHash != expectedHash)
+                {
+                    // Delete the tainted file immediately
+                    try { File.Delete(dest); } catch { }
+                    throw new InvalidOperationException(
+                        $"Installer integrity check failed!\n" +
+                        $"Expected: {expectedHash}\n" +
+                        $"Actual:   {actualHash}\n\n" +
+                        "The downloaded file may have been tampered with. Installation aborted.");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "[UpdateService] WARNING: version.json does not include a Sha256 hash. " +
+                    "Cannot verify installer integrity.");
+            }
 
             // WorkingDirectory must be a writable location — never the app's install dir
             // (C:\Program Files) because that is protected and causes "access denied" on launch.

@@ -203,6 +203,48 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Tasks — all non-SuperAdmin roles -->
+                    <Button x:Name="BtnTasks"
+                            Command="{Binding NavigateTasksCommand}"
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            Visibility="{Binding ShowTasksNav, Converter={StaticResource BoolVis}}"
+                            ToolTip="Tasks / Kanban Board">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9D5;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Tasks" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Projects — Manager+ -->
+                    <Button x:Name="BtnProjects"
+                            Command="{Binding NavigateProjectsCommand}"
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            Visibility="{Binding ShowProjectsNav, Converter={StaticResource BoolVis}}"
+                            ToolTip="Projects">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE943;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Projects" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Sprint Planner — Manager+ -->
+                    <Button x:Name="BtnSprintPlanner"
+                            Command="{Binding NavigateSprintPlannerCommand}"
+                            Style="{StaticResource NavButton}" Margin="0,2"
+                            Visibility="{Binding ShowProjectsNav, Converter={StaticResource BoolVis}}"
+                            ToolTip="Sprint Planner">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7C1;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="15" Width="22" VerticalAlignment="Center"/>
+                            <TextBlock Text="Sprints" Margin="8,0,0,0"
+                                       Visibility="{Binding SidebarExpanded, Converter={StaticResource BoolVis}}"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Employees — org Admin only (SuperAdmin uses Organisations page) -->
                     <Button x:Name="BtnEmployees"
                             Command="{Binding NavigateEmployeesCommand}"

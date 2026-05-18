@@ -22,7 +22,12 @@ namespace EAMAS.Core.Services
             if (settings == null)
             {
                 settings = CreateDefault(orgId);
-                _db.SystemSettings.InsertOne(settings);
+                // Use ReplaceOne with upsert so two concurrent callers don't both try InsertOne
+                // (which would throw a duplicate-key error on the unique OrganizationId index).
+                _db.SystemSettings.ReplaceOne(
+                    s => s.OrganizationId == orgId,
+                    settings,
+                    new MongoDB.Driver.ReplaceOptions { IsUpsert = true });
             }
 
             if (string.IsNullOrEmpty(settings.ScreenshotsDirectory))

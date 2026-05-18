@@ -1,6 +1,7 @@
 using EAMAS.Core.Data;
 using EAMAS.Core.Models;
 using EAMAS.Core.Services;
+using EAMAS.Core.Services.AI;
 using EAMAS.Desktop.Services;
 using EAMAS.Desktop.ViewModels;
 using EAMAS.Desktop.Views;
@@ -324,7 +325,7 @@ namespace EAMAS.Desktop
 
             try
             {
-                await svc.DownloadAndInstallAsync(update.DownloadUrl, progress);
+                await svc.DownloadAndInstallAsync(update, progress);
                 // ExitApp() is called inside DownloadAndInstallAsync after launch
             }
             catch (Exception ex)
@@ -371,6 +372,7 @@ namespace EAMAS.Desktop
                 {
                     var monitoring = Services?.GetService<MonitoringBackgroundService>();
                     monitoring?.Stop();
+                    Services?.GetService<GitHubPollingService>()?.Stop();
                 }
                 catch { }
 
@@ -380,6 +382,7 @@ namespace EAMAS.Desktop
                 (Current as App)?._trayIcon?.Dispose();
                 _instanceMutex?.ReleaseMutex();
                 _instanceMutex?.Dispose();
+                _instanceMutex = null;
                 Current.Shutdown();
             });
         }
@@ -452,9 +455,23 @@ namespace EAMAS.Desktop
             services.AddSingleton<SettingsService>();
             services.AddSingleton<AuditLogService>();
 
+            // AI Engineering Manager — Core services
+            services.AddSingleton<EncryptionService>();
+            services.AddSingleton<AiProviderFactory>();
+            services.AddSingleton<RagService>();
+            services.AddSingleton<ProjectService>();
+            services.AddSingleton<TaskService>();
+            services.AddSingleton<SprintService>();
+            services.AddSingleton<AiTaskGeneratorService>();
+            services.AddSingleton<AiCodeReviewService>();
+            services.AddSingleton<AiSprintPlannerService>();
+            services.AddSingleton<AiStandupService>();
+            services.AddSingleton<GitHubPollingService>();
+
             // Desktop services
             services.AddSingleton<NavigationService>();
             services.AddSingleton<ScreenshotPrivacyService>();
+            services.AddSingleton<TimeIntegrityService>();
             services.AddSingleton<MonitoringBackgroundService>();
 
             // ViewModels
@@ -468,6 +485,11 @@ namespace EAMAS.Desktop
             services.AddTransient<EmployeesViewModel>();
             services.AddTransient<AlertsViewModel>();
             services.AddTransient<OrganizationsViewModel>();
+            // AI Engineering Manager ViewModels
+            services.AddTransient<ProjectsViewModel>();
+            services.AddTransient<TasksViewModel>();
+            services.AddTransient<TaskDetailViewModel>();
+            services.AddTransient<SprintPlannerViewModel>();
 
             // Windows / Views
             services.AddTransient<LoginWindow>();
@@ -480,6 +502,10 @@ namespace EAMAS.Desktop
             services.AddTransient<EmployeesView>();
             services.AddTransient<AlertsView>();
             services.AddTransient<OrganizationsView>();
+            // AI Engineering Manager Views
+            services.AddTransient<TasksView>();
+            services.AddTransient<ProjectsView>();
+            services.AddTransient<SprintPlannerView>();
         }
 
         // ── MongoDB config resolution ─────────────────────────────────────────────
@@ -575,8 +601,10 @@ namespace EAMAS.Desktop
             TryCloseCurrentSession();
             _trayIcon?.Dispose();
             Services?.GetService<MonitoringBackgroundService>()?.Stop();
-            _instanceMutex?.ReleaseMutex();
+            Services?.GetService<GitHubPollingService>()?.Stop();
+            try { _instanceMutex?.ReleaseMutex(); } catch { }
             _instanceMutex?.Dispose();
+            _instanceMutex = null;
             base.OnExit(e);
         }
 

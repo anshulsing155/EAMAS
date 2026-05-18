@@ -6,6 +6,7 @@ namespace EAMAS.Core.Enums
         DistractingUsage,
         LowProductivity,
         UnauthorizedApp,
-        NoActivity
+        NoActivity,
+        ClockManipulation
     }
 }

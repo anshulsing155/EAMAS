@@ -173,6 +173,12 @@ namespace EAMAS.Core.Services
             _db.Users.UpdateOne(u => u.Id == userId, update);
         }
 
+        public void ClearMustChangePassword(string userId)
+        {
+            _db.Users.UpdateOne(u => u.Id == userId,
+                Builders<User>.Update.Set(u => u.MustChangePassword, false));
+        }
+
         public void SetConsent(string userId, bool consent)
         {
             var update = Builders<User>.Update.Set(u => u.ConsentGiven, consent);

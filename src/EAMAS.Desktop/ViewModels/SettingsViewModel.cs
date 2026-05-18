@@ -234,8 +234,17 @@ namespace EAMAS.Desktop.ViewModels
 
         private void ChangePassword(string current, string newPwd, string confirm)
         {
-            if (string.IsNullOrWhiteSpace(newPwd) || newPwd.Length < 6)
-            { StatusMessage = "New password must be at least 6 characters."; return; }
+            // ── Strength requirements ─────────────────────────────────────
+            if (string.IsNullOrWhiteSpace(newPwd) || newPwd.Length < 8)
+            { StatusMessage = "New password must be at least 8 characters."; return; }
+            if (!newPwd.Any(char.IsUpper))
+            { StatusMessage = "New password must contain at least one uppercase letter."; return; }
+            if (!newPwd.Any(char.IsLower))
+            { StatusMessage = "New password must contain at least one lowercase letter."; return; }
+            if (!newPwd.Any(char.IsDigit))
+            { StatusMessage = "New password must contain at least one digit."; return; }
+            if (!newPwd.Any(c => !char.IsLetterOrDigit(c)))
+            { StatusMessage = "New password must contain at least one special character."; return; }
             if (newPwd != confirm)
             { StatusMessage = "Passwords do not match."; return; }
 
@@ -244,6 +253,10 @@ namespace EAMAS.Desktop.ViewModels
             { StatusMessage = "Current password is incorrect."; return; }
 
             _userService.ChangePassword(App.CurrentUser.Id, newPwd);
+
+            // Clear forced-change flag if it was set (temporary password flow)
+            if (currentUser.MustChangePassword)
+                _userService.ClearMustChangePassword(App.CurrentUser.Id);
 
             _auditLogService.Log(App.CurrentOrgId, App.CurrentUser.Id,
                 App.CurrentUser.FullName, "PasswordChanged", "User changed their own password.");

@@ -73,13 +73,32 @@ namespace EAMAS.Core.Services
             _db = db;
         }
 
+        // ── Per-org custom rule cache (avoids a DB query on every poll cycle) ──────────────────
+        private readonly Dictionary<string, (List<AppCategoryRule> Rules, DateTime ExpiresAt)> _ruleCache = new();
+        private readonly object _cacheLock = new();
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
+
+        private List<AppCategoryRule> GetCachedRules(string orgId)
+        {
+            lock (_cacheLock)
+            {
+                if (_ruleCache.TryGetValue(orgId, out var cached) && cached.ExpiresAt > DateTime.UtcNow)
+                    return cached.Rules;
+
+                var rules = _db.AppCategoryRules
+                    .Find(r => r.OrganizationId == orgId && r.IsActive)
+                    .SortByDescending(r => r.Priority)
+                    .ToList();
+
+                _ruleCache[orgId] = (rules, DateTime.UtcNow + CacheTtl);
+                return rules;
+            }
+        }
+
         public ActivityCategory Categorize(string orgId, string processName, string windowTitle)
         {
-            // Org-specific custom rules first (higher priority)
-            var rules = _db.AppCategoryRules
-                .Find(r => r.OrganizationId == orgId && r.IsActive)
-                .SortByDescending(r => r.Priority)
-                .ToList();
+            // Org-specific custom rules first (higher priority), loaded from cache
+            var rules = GetCachedRules(orgId);
 
             foreach (var rule in rules)
             {
@@ -101,6 +120,15 @@ namespace EAMAS.Core.Services
             }
 
             return ActivityCategory.Neutral;
+        }
+
+        /// <summary>Invalidates the cached rules for an org, e.g. after an admin adds/edits a rule.</summary>
+        public void InvalidateCache(string orgId)
+        {
+            lock (_cacheLock)
+            {
+                _ruleCache.Remove(orgId);
+            }
         }
 
         public List<AppCategoryRule> GetCustomRules(string orgId)

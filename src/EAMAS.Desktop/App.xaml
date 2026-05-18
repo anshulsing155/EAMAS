@@ -645,5 +645,83 @@
                 From="0" To="360" Duration="0:0:0.9"/>
         </Storyboard>
 
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!--  STATUS BAR VARIANTS                                         -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <Style x:Key="SuccessBar" TargetType="Border">
+            <Setter Property="Background"    Value="#14532D"/>
+            <Setter Property="CornerRadius"  Value="8"/>
+            <Setter Property="Padding"       Value="14,10"/>
+            <Setter Property="Margin"        Value="0,0,0,16"/>
+        </Style>
+        <Style x:Key="ErrorBar" TargetType="Border">
+            <Setter Property="Background"    Value="#7F1D1D"/>
+            <Setter Property="CornerRadius"  Value="8"/>
+            <Setter Property="Padding"       Value="14,10"/>
+            <Setter Property="Margin"        Value="0,0,0,16"/>
+        </Style>
+        <Style x:Key="InfoBar" TargetType="Border">
+            <Setter Property="Background"    Value="#1E293B"/>
+            <Setter Property="CornerRadius"  Value="8"/>
+            <Setter Property="Padding"       Value="14,10"/>
+            <Setter Property="Margin"        Value="0,0,0,16"/>
+        </Style>
+        <Style x:Key="WarningBar" TargetType="Border">
+            <Setter Property="Background"    Value="#78350F"/>
+            <Setter Property="CornerRadius"  Value="8"/>
+            <Setter Property="Padding"       Value="14,10"/>
+            <Setter Property="Margin"        Value="0,0,0,16"/>
+        </Style>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!--  EMPTY STATE                                                 -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <Style x:Key="EmptyStateText" TargetType="TextBlock">
+            <Setter Property="FontSize"           Value="12"/>
+            <Setter Property="Foreground"         Value="#334155"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment"      Value="Center"/>
+            <Setter Property="TextWrapping"       Value="Wrap"/>
+        </Style>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!--  SMALL ICON BUTTON                                           -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <Style x:Key="SmallButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="Padding"    Value="8,6"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="MinHeight"  Value="30"/>
+        </Style>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!--  FORM / PROJECT VIEW STYLES                                  -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <Style x:Key="HeadingSmall" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        </Style>
+
+        <!-- Aliases — same visuals as the existing animated styles -->
+        <Style x:Key="ModernTextBox"      TargetType="TextBox"     BasedOn="{StaticResource InputField}"/>
+        <Style x:Key="ModernPasswordBox"  TargetType="PasswordBox" BasedOn="{StaticResource PasswordField}"/>
+        <Style x:Key="ModernComboBox"     TargetType="ComboBox"    BasedOn="{StaticResource StyledComboBox}"/>
+
+        <Style x:Key="ModernDatePicker" TargetType="DatePicker">
+            <Setter Property="Background"      Value="White"/>
+            <Setter Property="Foreground"      Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="8,8"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="MinHeight"       Value="40"/>
+        </Style>
+
     </Application.Resources>
 </Application>
